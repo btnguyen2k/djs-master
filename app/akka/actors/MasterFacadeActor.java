@@ -8,22 +8,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.github.ddth.djs.message.TickMessage;
+import com.github.ddth.djs.message.bus.TickMessage;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-import akka.cluster.Cluster;
 import akka.cluster.ClusterEvent.MemberEvent;
 import akka.cluster.ClusterEvent.MemberRemoved;
 import akka.cluster.ClusterEvent.MemberUp;
 import akka.cluster.Member;
-import akka.cluster.pubsub.DistributedPubSub;
-import akka.cluster.pubsub.DistributedPubSubMediator;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import akka.utils.AkkaConstants;
+import modules.registry.IRegistry;
+import play.Logger;
 import utils.DjsMasterConstants;
 
 /**
@@ -38,15 +33,9 @@ import utils.DjsMasterConstants;
  * @author Thanh Nguyen <btnguyen2k@gmail.com>
  * @since 0.1.0
  */
-public class MasterFacadeActor extends UntypedActor {
+public class MasterFacadeActor extends BaseDjsActor {
 
-    public final static Props PROPS = Props.create(MasterFacadeActor.class);
-    public final static String NAME = MasterFacadeActor.class.getCanonicalName();
-
-    private LoggingAdapter LOGGER = Logging.getLogger(getContext().system(), this);
-    private Cluster cluster = Cluster.get(getContext().system());
-    private ActorRef distributedPubSubMediator = DistributedPubSub.get(getContext().system())
-            .mediator();
+    public final static String NAME = MasterFacadeActor.class.getSimpleName();
 
     private Cancellable tick = getContext().system().scheduler().schedule(
             DjsMasterConstants.DELAY_INITIAL, DjsMasterConstants.DELAY_TICK, new Runnable() {
@@ -79,13 +68,17 @@ public class MasterFacadeActor extends UntypedActor {
         }
     });
 
+    public MasterFacadeActor(IRegistry registry) {
+        super(registry);
+    }
+
     /**
      * {@inheritDoc}
      */
     @Override
     public void preStart() throws Exception {
         // subscribe to cluster changes
-        cluster.subscribe(getSelf(), MemberEvent.class);
+        getCluster().subscribe(getSelf(), MemberEvent.class);
         super.preStart();
     }
 
@@ -94,46 +87,52 @@ public class MasterFacadeActor extends UntypedActor {
      */
     @Override
     public void postStop() throws Exception {
-        if (tick != null) {
+        try {
             tick.cancel();
+        } catch (Exception e) {
+            Logger.warn(e.getMessage(), e);
         }
-        if (cluster != null) {
-            cluster.unsubscribe(getSelf());
+
+        try {
+            getCluster().unsubscribe(getSelf());
+        } catch (Exception e) {
+            Logger.warn(e.getMessage(), e);
         }
+
         super.postStop();
     }
 
-    private void _eventMemberUp(MemberUp msg) {
+    protected void _eventMemberUp(MemberUp msg) {
         Member m = msg.member();
         if (m.hasRole(AkkaConstants.ROLE_MASTER)) {
             clusterLeaders.add(m);
-            LOGGER.info("Master node UP [" + m.address().toString()
+            Logger.info("Master node UP [" + m.address().toString()
                     + "]. Number of nodes in cluster: " + clusterLeaders.size());
         }
         if (m.hasRole(AkkaConstants.ROLE_MASTER)) {
             clusterWorkers.add(m);
-            LOGGER.info("Worker node UP [" + m.address().toString()
+            Logger.info("Worker node UP [" + m.address().toString()
                     + "]. Number of nodes in cluster: " + clusterWorkers.size());
         }
     }
 
-    private void _eventMemberRemoved(MemberRemoved msg) {
+    protected void _eventMemberRemoved(MemberRemoved msg) {
         Member m = msg.member();
         if (m.hasRole(AkkaConstants.ROLE_MASTER)) {
             clusterLeaders.remove(m);
-            LOGGER.info("Master node REMOVED [" + m.address().toString()
+            Logger.info("Master node REMOVED [" + m.address().toString()
                     + "]. Number of nodes in cluster: " + clusterLeaders.size());
         }
         if (m.hasRole(AkkaConstants.ROLE_MASTER)) {
             clusterWorkers.remove(m);
-            LOGGER.info("Worker node REMOVED [" + m.address().toString()
+            Logger.info("Worker node REMOVED [" + m.address().toString()
                     + "]. Number of nodes in cluster: " + clusterWorkers.size());
         }
     }
 
     private AtomicBoolean LOCK = new AtomicBoolean(false);
 
-    private void _eventTick(TickMessage tick) {
+    protected void _eventTick(TickMessage tick) {
         Member leader = null;
         try {
             leader = clusterLeaders.first();
@@ -143,7 +142,7 @@ public class MasterFacadeActor extends UntypedActor {
 
         if (leader == null) {
             final String msg = "Received TICK message, but cluster member is empty! " + tick;
-            LOGGER.warning(msg);
+            Logger.warn(msg);
         } else {
             if (LOCK.compareAndSet(false, true)) {
                 try {
@@ -151,8 +150,7 @@ public class MasterFacadeActor extends UntypedActor {
                     String thisNodeAddr = context().system().provider().getDefaultAddress()
                             .toString();
                     if (StringUtils.equalsIgnoreCase(leaderAddr, thisNodeAddr)) {
-                        distributedPubSubMediator.tell(new DistributedPubSubMediator.Publish(
-                                AkkaConstants.TOPIC_TICK, new TickMessage(), true), getSelf());
+                        publishToTopic(new TickMessage(), AkkaConstants.TOPIC_TICK, true);
                     } else {
                         // I am not leader!
                     }
@@ -162,6 +160,8 @@ public class MasterFacadeActor extends UntypedActor {
                 }
             } else {
                 // Busy processing a previous message
+                final String msg = "Received TICK message, but I am busy! " + tick;
+                Logger.warn(msg);
             }
         }
     }
@@ -175,7 +175,7 @@ public class MasterFacadeActor extends UntypedActor {
         } else if (message instanceof TickMessage) {
             _eventTick((TickMessage) message);
         } else {
-            unhandled(message);
+            super.onReceive(message);
         }
     }
 }

@@ -1,16 +1,16 @@
 package akka.actors;
 
-import com.github.ddth.djs.bo.job.JobInfoBo;
-import com.github.ddth.djs.message.JobInfoUpdatedMessage;
-import com.github.ddth.djs.message.TickMessage;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
-import akka.cluster.pubsub.DistributedPubSub;
-import akka.cluster.pubsub.DistributedPubSubMediator;
-import akka.cluster.pubsub.DistributedPubSubMediator.SubscribeAck;
-import akka.cluster.pubsub.DistributedPubSubMediator.UnsubscribeAck;
+import org.apache.commons.lang3.StringUtils;
+
+import com.github.ddth.djs.bo.job.JobInfoBo;
+import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
+import com.github.ddth.djs.message.bus.TickMessage;
+import com.github.ddth.djs.utils.CronFormat;
+
 import akka.utils.AkkaConstants;
+import modules.registry.IRegistry;
 import play.Logger;
 
 /**
@@ -19,29 +19,52 @@ import play.Logger;
  * @author Thanh Nguyen <btnguyen2k@gmail.com>
  * @since 0.1.0
  */
-public class WorkerJobActor extends UntypedActor {
+public class WorkerJobActor extends BaseDjsActor {
 
-    public final static String NAME = WorkerJobActor.class.getCanonicalName();
+    public final static String NAME = WorkerJobActor.class.getSimpleName();
 
+    /**
+     * Calculates an "instance" actor name according to the associated
+     * {@link JobInfoBo} instance.
+     * 
+     * @param jobInfo
+     * @return
+     */
     public static String calcInstanceName(JobInfoBo jobInfo) {
         return NAME + "-" + jobInfo.getId();
     }
 
     private JobInfoBo jobInfo;
+    private CronFormat cronFormat;
 
     // subscribe to "TICK" topic, with group=NAME+jobInfo
     private String instanceName, subscribeTopic = AkkaConstants.TOPIC_TICK;
 
-    private ActorRef distributedPubSubMediator = DistributedPubSub.get(getContext().system())
-            .mediator();
-
-    public WorkerJobActor(JobInfoBo jobInfo) {
+    public WorkerJobActor(IRegistry registry, JobInfoBo jobInfo) {
+        super(registry);
         this.jobInfo = jobInfo;
         instanceName = calcInstanceName(jobInfo);
     }
 
-    public String getInstanceName() {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getActorName() {
         return instanceName;
+    }
+
+    protected JobInfoBo getJobInfo() {
+        return jobInfo;
+    }
+
+    protected CronFormat getCronFormat() {
+        if (cronFormat == null) {
+            synchronized (this) {
+                cronFormat = jobInfo.getCronFormat();
+            }
+        }
+        return cronFormat;
     }
 
     /**
@@ -49,11 +72,7 @@ public class WorkerJobActor extends UntypedActor {
      */
     @Override
     public void preStart() throws Exception {
-        distributedPubSubMediator.tell(
-                new DistributedPubSubMediator.Subscribe(subscribeTopic, instanceName, getSelf()),
-                getSelf());
-        Logger.info(
-                "Subscribed to topic [" + subscribeTopic + "] as group [" + instanceName + "].");
+        subscribeToTopic(subscribeTopic, instanceName);
         super.preStart();
     }
 
@@ -62,41 +81,80 @@ public class WorkerJobActor extends UntypedActor {
      */
     @Override
     public void postStop() throws Exception {
-        // unsubscribe from "TICK" topic
-        distributedPubSubMediator.tell(
-                new DistributedPubSubMediator.Unsubscribe(subscribeTopic, instanceName, getSelf()),
-                getSelf());
-        Logger.info("Unsubscribed from topic [" + subscribeTopic + "] as group [" + instanceName
-                + "].");
+        unsubscribeFromTopic(subscribeTopic, instanceName);
         super.postStop();
     }
 
     @Override
     public void onReceive(Object message) throws Exception {
-        if (message instanceof DistributedPubSubMediator.SubscribeAck) {
-            // subscribed successfully!
-            DistributedPubSubMediator.SubscribeAck ack = (SubscribeAck) message;
-            Logger.info(
-                    "[" + instanceName + "] Subscribed successfully to [" + ack.subscribe() + "].");
-        } else if (message instanceof DistributedPubSubMediator.UnsubscribeAck) {
-            // unsubscribed successfully!
-            DistributedPubSubMediator.UnsubscribeAck ack = (UnsubscribeAck) message;
-            Logger.info("[" + instanceName + "] Unsubscribed successfully from ["
-                    + ack.unsubscribe() + "].");
-        } else if (message instanceof JobInfoUpdatedMessage) {
+        if (message instanceof JobInfoUpdatedMessage) {
             _eventJobInfoUpdated((JobInfoUpdatedMessage) message);
         } else if (message instanceof TickMessage) {
             _eventTick((TickMessage) message);
         } else {
-            unhandled(message);
+            super.onReceive(message);
         }
     }
 
-    private void _eventJobInfoUpdated(JobInfoUpdatedMessage msg) {
-        this.jobInfo = msg.jobInfo;
+    protected void _eventJobInfoUpdated(JobInfoUpdatedMessage msg) {
+        JobInfoBo jobInfo = msg.jobInfo;
+        if (StringUtils.equalsIgnoreCase(jobInfo.getId(), this.jobInfo.getId())) {
+            this.jobInfo.fromMap(jobInfo.toMap());
+            synchronized (this) {
+                this.cronFormat = null;
+            }
+        }
     }
 
-    private void _eventTick(TickMessage msg) {
-        System.out.println("========== [" + jobInfo);
+    /*----------------------------------------------------------------------*/
+
+    private TickMessage lastTick;
+
+    /**
+     * Checks if "tick" matches job's cron format.
+     * 
+     * @param tick
+     * @return
+     */
+    protected boolean isTickMatched(TickMessage tick) {
+        if (tick.timestampMillis + 30000L > System.currentTimeMillis()) {
+            if (lastTick == null || lastTick.timestampMillis < tick.timestampMillis) {
+                return getCronFormat().matches(tick.timestampMillis);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Main "tick" processing method.
+     * 
+     * @param tick
+     */
+    protected void doTick(TickMessage tick) {
+        // Date d = new Date(tick.timestampMillis);
+        // System.out.println("=========={" + getActorName() + "} TICK matches
+        // [" + d + "] against ["
+        // + jobInfo.getCron() + "]");
+        // TODO
+    }
+
+    private AtomicBoolean LOCK = new AtomicBoolean(false);
+
+    protected void _eventTick(TickMessage msg) {
+        if (isTickMatched(msg)) {
+            if (LOCK.compareAndSet(false, true)) {
+                try {
+                    lastTick = msg;
+                    doTick(msg);
+                } finally {
+                    LOCK.set(false);
+                }
+            } else {
+                // Busy processing a previous message
+                final String logMsg = "{" + instanceName
+                        + "} Received TICK message, but I am busy! " + msg;
+                Logger.warn(logMsg);
+            }
+        }
     }
 }

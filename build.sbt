@@ -55,5 +55,5 @@ libraryDependencies ++= Seq(
     // queue system: Kafka
     "com.github.ddth"           %  "ddth-kafka"                 % "1.2.1",
 
-    "com.github.ddth"           %  "djs-commons"                % "0.1.2"
+    "com.github.ddth"           %  "djs-commons"                % "0.1.3"
 )

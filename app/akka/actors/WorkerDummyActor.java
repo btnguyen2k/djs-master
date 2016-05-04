@@ -1,64 +1,25 @@
 package akka.actors;
 
-import com.github.ddth.djs.message.TickMessage;
+import java.util.Date;
 
-import akka.actor.ActorRef;
-import akka.actor.Props;
-import akka.actor.UntypedActor;
-import akka.cluster.pubsub.DistributedPubSub;
-import akka.cluster.pubsub.DistributedPubSubMediator;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
-import akka.utils.AkkaConstants;
+import com.github.ddth.djs.bo.job.JobInfoBo;
+import com.github.ddth.djs.message.bus.TickMessage;
 
-public class WorkerDummyActor extends UntypedActor {
+import modules.registry.IRegistry;
 
-    public final static Props PROPS = Props.create(WorkerDummyActor.class);
-    public final static String NAME = WorkerDummyActor.class.getCanonicalName();
+public class WorkerDummyActor extends WorkerJobActor {
 
-    private LoggingAdapter LOGGER = Logging.getLogger(getContext().system(), this);
-    // private Cluster cluster = Cluster.get(getContext().system());
-    private ActorRef distributedPubSubMediator = DistributedPubSub.get(getContext().system())
-            .mediator();
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void preStart() throws Exception {
-        // subscribe to "TICK" topic, with group=NAME
-        final String topic = AkkaConstants.TOPIC_TICK;
-        final String group = NAME;
-        distributedPubSubMediator
-                .tell(new DistributedPubSubMediator.Subscribe(topic, group, getSelf()), getSelf());
-        super.preStart();
+    public WorkerDummyActor(IRegistry registry, JobInfoBo jobInfo) {
+        super(registry, jobInfo);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public void postStop() throws Exception {
-        // unsubscribe to "TICK" topic
-        final String topic = AkkaConstants.TOPIC_TICK;
-        final String group = NAME;
-        distributedPubSubMediator.tell(
-                new DistributedPubSubMediator.Unsubscribe(topic, group, getSelf()), getSelf());
-        super.postStop();
-    }
-
-    @Override
-    public void onReceive(Object message) throws Exception {
-        if (message instanceof DistributedPubSubMediator.SubscribeAck) {
-            // subscribed successfully!
-            LOGGER.info("WORKER: subcribed successfully.");
-        } else if (message instanceof DistributedPubSubMediator.UnsubscribeAck) {
-            // unsubscribed successfully!
-            LOGGER.info("WORKER: unsubcribed successfully.");
-        } else if (message instanceof TickMessage) {
-            String msg = "Worker TICK! " + message;
-            LOGGER.info(msg);
-        }
-        unhandled(message);
+    protected void doTick(TickMessage tick) {
+        Date d = new Date(tick.timestampMillis);
+        System.out.println("=========={" + getActorName() + "} TICK matches [" + d + "] against ["
+                + getJobInfo().getCron() + "]");
     }
 }

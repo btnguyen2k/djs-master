@@ -5,11 +5,13 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.google.inject.Provider;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
 import akka.actor.ActorSystem;
+import akka.actor.Props;
 import akka.actors.MasterFacadeActor;
 import akka.actors.WorkerDummyActor;
 import akka.actors.WorkerJobManagerActor;
@@ -27,12 +29,39 @@ public class ClusterImpl implements ICluster {
     private Provider<IRegistry> registry;
 
     private void initMasterActors() {
-        actorSystem.actorOf(MasterFacadeActor.PROPS, MasterFacadeActor.NAME);
+        {
+            // master facade actor
+            Props props = Props.create(MasterFacadeActor.class, registry.get());
+            actorSystem.actorOf(props, MasterFacadeActor.NAME);
+        }
     }
 
     private void initWorkerActors() {
-        actorSystem.actorOf(WorkerJobManagerActor.PROPS, WorkerJobManagerActor.NAME);
-        actorSystem.actorOf(WorkerDummyActor.PROPS, WorkerDummyActor.NAME);
+        {
+            // worker job manager actor
+            Props props = Props.create(WorkerJobManagerActor.class, registry.get());
+            actorSystem.actorOf(props, WorkerJobManagerActor.NAME);
+        }
+
+        // create some dummy workers for testing
+        {
+            JobInfoBo jobInfo = JobInfoBo.newInstance();
+            jobInfo.setId("every-5secs").setCron("*/5 * * * * *");
+            Props props = Props.create(WorkerDummyActor.class, registry.get(), jobInfo);
+            actorSystem.actorOf(props, "every-5secs");
+        }
+        {
+            JobInfoBo jobInfo = JobInfoBo.newInstance();
+            jobInfo.setId("every-3secs").setCron("*/3 * * * * *");
+            Props props = Props.create(WorkerDummyActor.class, registry.get(), jobInfo);
+            actorSystem.actorOf(props, "every-3secs");
+        }
+        {
+            JobInfoBo jobInfo = JobInfoBo.newInstance();
+            jobInfo.setId("everyminute").setCron("0 * * * * *");
+            Props props = Props.create(WorkerDummyActor.class, registry.get(), jobInfo);
+            actorSystem.actorOf(props, "everyminute");
+        }
     }
 
     private void init() {

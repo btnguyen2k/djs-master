@@ -46,6 +46,18 @@
 		<property name="dataSource" ref="DATASOURCE" />
 	</bean>
 
+	<!-- Queue to push task notifications to workers -->
+	<bean id="KAFKA_CLIENT_TASKS" class="com.github.ddth.kafka.KafkaClient"
+		scope="singleton" init-method="init" destroy-method="destroy">
+		<property name="kafkaBootstrapServers" ref="_kafka_bootstrapServers_tasks" />
+	</bean>
+
+	<!-- Queue to buffer task results/feedbacks -->
+	<bean id="KAFKA_CLIENT_FEEDBACK" class="com.github.ddth.kafka.KafkaClient"
+		scope="singleton" init-method="init" destroy-method="destroy">
+		<property name="kafkaBootstrapServers" ref="_kafka_bootstrapServers_feedback" />
+	</bean>
+
 	<!-- beans for development env -->
 	<beans>
 		<bean name="_redis_host" class="java.lang.String">
@@ -64,6 +76,13 @@
 		</bean>
 		<bean id="_db_password" class="java.lang.String">
 			<constructor-arg value="test" />
+		</bean>
+
+		<bean id="_kafka_bootstrapServers_tasks" class="java.lang.String">
+			<constructor-arg value="localhost:9092" />
+		</bean>
+		<bean id="_kafka_bootstrapServers_feedback" class="java.lang.String">
+			<constructor-arg value="localhost:9092" />
 		</bean>
 	</beans>
 
@@ -85,6 +104,13 @@
 		</bean>
 		<bean id="_db_password" class="java.lang.String">
 			<constructor-arg value="_dbpassword_" />
+		</bean>
+
+		<bean id="_kafka_bootstrapServers_tasks" class="java.lang.String">
+			<constructor-arg value="_host1:9092,_host2:9092,_host3:9092" />
+		</bean>
+		<bean id="_kafka_bootstrapServers_feedback" class="java.lang.String">
+			<constructor-arg value="_host1:9092,_host2:9092,_host3:9092" />
 		</bean>
 	</beans>
 </beans>

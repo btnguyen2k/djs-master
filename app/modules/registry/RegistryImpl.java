@@ -10,6 +10,10 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
+import com.github.ddth.djs.bo.job.IJobDao;
+import com.github.ddth.djs.bo.log.ITaskLogDao;
+import com.github.ddth.kafka.KafkaClient;
+
 import akka.actor.ActorSystem;
 import play.Application;
 import play.Logger;
@@ -94,5 +98,37 @@ public class RegistryImpl implements IRegistry {
     @Override
     public ActorSystem getLocalActorSystem() {
         return actorSystem;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IJobDao getJobDao() {
+        return appContext.getBean(IJobDao.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ITaskLogDao getTaskLogDao() {
+        return appContext.getBean(ITaskLogDao.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public KafkaClient getKafkaClientForTasks() {
+        return appContext.getBean("KAFKA_CLIENT_TASKS", KafkaClient.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public KafkaClient getKafkaClientForFeedback() {
+        return appContext.getBean("KAFKA_CLIENT_FEEDBACK", KafkaClient.class);
     }
 }
