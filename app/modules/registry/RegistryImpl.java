@@ -5,7 +5,6 @@ import java.io.File;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
@@ -44,15 +43,13 @@ public class RegistryImpl implements IRegistry {
     }
 
     private void initApplicationContext() {
-        String configFile = System.getProperty("spring.config.file", "conf/spring/beans.xml");
-        if (!StringUtils.isBlank(configFile)) {
-            File springConfigFile = configFile.startsWith("/") ? new File(configFile)
-                    : new File(playApp.path(), configFile);
-            AbstractApplicationContext applicationContext = new FileSystemXmlApplicationContext(
-                    "file:" + springConfigFile.getAbsolutePath());
-            applicationContext.start();
-            appContext = applicationContext;
-        }
+        String configFile = playApp.configuration().getString("spring.conf");
+        File springConfigFile = configFile.startsWith("/") ? new File(configFile)
+                : new File(playApp.path(), configFile);
+        AbstractApplicationContext applicationContext = new FileSystemXmlApplicationContext(
+                "file:" + springConfigFile.getAbsolutePath());
+        applicationContext.start();
+        appContext = applicationContext;
     }
 
     private void initActors() {

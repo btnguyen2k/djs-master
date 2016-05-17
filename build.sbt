@@ -27,7 +27,9 @@ scalaVersion := "2.11.7"
 resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases"
 
 val _springVersion           = "4.2.5.RELEASE"
-val _ddthCacheAdapterVersion = "0.4.0"
+val _ddthCacheAdapterVersion = "0.4.1"
+val _ddthQueueVersion        = "0.4.0.1"
+val _ddthCommons             = "0.4.0"
 val _akkaVersion             = "2.4.4"
 
 libraryDependencies ++= Seq(
@@ -40,7 +42,8 @@ libraryDependencies ++= Seq(
     "com.zaxxer"                %  "HikariCP"                   % "2.4.5",
     // "org.apache.commons"        %  "commons-dbcp2"              % "2.1.1",
     "mysql"                     %  "mysql-connector-java"       % "5.1.38",
-    // "org.postgresql"            %  "postgresql"                 % "9.4.1208",
+    "org.postgresql"            %  "postgresql"                 % "9.4.1208",
+    "com.h2database"            %  "h2"                         % "1.4.191",
 
     "org.springframework"       %  "spring-beans"               % _springVersion,
     "org.springframework"       %  "spring-expression"          % _springVersion,
@@ -50,10 +53,14 @@ libraryDependencies ++= Seq(
     "com.github.ddth"           %  "ddth-cache-adapter-core"    % _ddthCacheAdapterVersion,
     "com.github.ddth"           %  "ddth-cache-adapter-redis"   % _ddthCacheAdapterVersion,
 
-    "com.github.ddth"           %  "ddth-commons-core"          % "0.4.0",
+    "com.github.ddth"           %  "ddth-commons-core"          % _ddthCommons,
+    "com.github.ddth"           %  "ddth-commons-serialization" % _ddthCommons,
+    "com.github.ddth"           %  "ddth-commons-thrift"        % _ddthCommons,
 
     // queue system: Kafka
     "com.github.ddth"           %  "ddth-kafka"                 % "1.2.1",
+    "com.github.ddth"           %  "ddth-queue-core"            % _ddthQueueVersion,
+    "com.github.ddth"           %  "ddth-queue-kafka"           % _ddthQueueVersion,
 
-    "com.github.ddth"           %  "djs-commons"                % "0.1.3"
+    "com.github.ddth"           %  "djs-commons"                % "0.1.3.1"
 )

@@ -13,7 +13,7 @@ public class ClusterModule extends Module {
      */
     @Override
     public Seq<Binding<?>> bindings(Environment env, Configuration conf) {
-        Seq<Binding<?>> bindings = seq(bind(ICluster.class).to(ClusterImpl.class));
+        Seq<Binding<?>> bindings = seq(bind(ICluster.class).to(ClusterImpl.class).eagerly());
         return bindings;
     }
 

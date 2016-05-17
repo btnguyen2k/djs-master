@@ -12,9 +12,11 @@ import com.github.ddth.djs.message.bus.TickMessage;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
+import akka.cluster.ClusterEvent;
 import akka.cluster.ClusterEvent.MemberEvent;
 import akka.cluster.ClusterEvent.MemberRemoved;
 import akka.cluster.ClusterEvent.MemberUp;
+import akka.cluster.ClusterEvent.UnreachableMember;
 import akka.cluster.Member;
 import akka.utils.AkkaConstants;
 import modules.registry.IRegistry;
@@ -78,7 +80,8 @@ public class MasterFacadeActor extends BaseDjsActor {
     @Override
     public void preStart() throws Exception {
         // subscribe to cluster changes
-        getCluster().subscribe(getSelf(), MemberEvent.class);
+        getCluster().subscribe(getSelf(), ClusterEvent.initialStateAsEvents(), MemberEvent.class,
+                UnreachableMember.class);
         super.preStart();
     }
 
