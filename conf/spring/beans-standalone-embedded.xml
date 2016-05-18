@@ -17,6 +17,7 @@
 		<property name="defaultExpireAfterWrite" value="-1" />
 	</bean>
 
+
 	<bean id="DATASOURCE" class="com.zaxxer.hikari.HikariDataSource"
 		scope="singleton" lazy-init="false">
 		<property name="driverClassName" value="org.h2.Driver" />
@@ -33,6 +34,12 @@
 		<property name="initializationFailFast" value="false" />
 		<!-- <property name="connectionInitSql" value="SET NAMES 'utf8'"/> -->
 		<property name="leakDetectionThreshold" value="300000" />
+	</bean>
+
+	<bean id="DAO_USER" class="bo.user.jdbc.JdbcUserDao" scope="singleton"
+		init-method="init" destroy-method="destroy">
+		<property name="cacheFactory" ref="CACHE_FACTORY" />
+		<property name="dataSource" ref="DATASOURCE" />
 	</bean>
 
 	<bean id="DAO_JOBINFO" class="com.github.ddth.djs.bo.job.jdbc.JdbcJobDao"

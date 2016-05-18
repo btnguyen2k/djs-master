@@ -5,6 +5,7 @@ import com.github.ddth.djs.bo.log.ITaskLogDao;
 import com.github.ddth.kafka.KafkaClient;
 
 import akka.actor.ActorSystem;
+import bo.user.IUserDao;
 import play.Application;
 
 public interface IRegistry {
@@ -35,6 +36,13 @@ public interface IRegistry {
      * @return
      */
     public ITaskLogDao getTaskLogDao();
+
+    /**
+     * Gets {@link IUserDao} instance.
+     * 
+     * @return
+     */
+    public IUserDao getUserDao();
 
     /**
      * Gets {@link KafkaClient} instance to push task notifications to workers.

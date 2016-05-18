@@ -14,6 +14,7 @@ import com.github.ddth.djs.bo.log.ITaskLogDao;
 import com.github.ddth.kafka.KafkaClient;
 
 import akka.actor.ActorSystem;
+import bo.user.IUserDao;
 import play.Application;
 import play.Logger;
 import play.inject.ApplicationLifecycle;
@@ -111,6 +112,14 @@ public class RegistryImpl implements IRegistry {
     @Override
     public ITaskLogDao getTaskLogDao() {
         return appContext.getBean(ITaskLogDao.class);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public IUserDao getUserDao() {
+        return appContext.getBean(IUserDao.class);
     }
 
     /**

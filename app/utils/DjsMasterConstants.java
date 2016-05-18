@@ -14,4 +14,6 @@ import scala.concurrent.duration.FiniteDuration;
 public class DjsMasterConstants {
     public final static FiniteDuration DELAY_INITIAL = Duration.create(2, TimeUnit.SECONDS);
     public final static FiniteDuration DELAY_TICK = Duration.create(1, TimeUnit.SECONDS);
+
+    public final static int GROUP_ADMIN = 1;
 }

@@ -21,6 +21,7 @@ public class UserBo extends BaseBo {
     }
 
     private final static String ATTR_ID = "id";
+    private final static String ATTR_GROUP_ID = "gid";
     private final static String ATTR_USERNAME = "u";
     private final static String ATTR_PASSWORD = "p";
     private final static String ATTR_EMAIL = "e";
@@ -32,6 +33,17 @@ public class UserBo extends BaseBo {
 
     public UserBo setId(String id) {
         setAttribute(ATTR_ID, id != null ? id.trim().toLowerCase() : null);
+        return this;
+    }
+
+    @JsonIgnore
+    public int getGroupId() {
+        Integer groupId = getAttribute(ATTR_GROUP_ID, Integer.class);
+        return groupId != null ? groupId.intValue() : 0;
+    }
+
+    public UserBo setGroupId(int groupId) {
+        setAttribute(ATTR_GROUP_ID, groupId);
         return this;
     }
 

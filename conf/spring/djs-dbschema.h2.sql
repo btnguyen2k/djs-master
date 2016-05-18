@@ -3,11 +3,16 @@
 CREATE TABLE IF NOT EXISTS djs_user (
     uid                 VARCHAR(32),
         PRIMARY KEY (uid),
+    ugroup_id           INT,
     uname               VARCHAR(64),
         UNIQUE INDEX (uname),
     upassword           VARCHAR(255),
     uemail              VARCHAR(255)
 );
+
+-- admin account: admin/password
+-- MERGE INTO djs_user (uid, ugroup, uname, upassword, uemail) KEY (uid)
+-- VALUES("1", 1, "admin", "3254a4988474afb14cdf2e3fc3d29066461d756f3647569acda6400aec3aecff", "admin@localhost");
 
 CREATE TABLE IF NOT EXISTS djs_jobinfo (
     job_id                          VARCHAR(32),
