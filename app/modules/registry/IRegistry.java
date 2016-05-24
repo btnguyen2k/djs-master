@@ -9,6 +9,7 @@ import bo.user.IUserDao;
 import play.Application;
 
 public interface IRegistry {
+
     /**
      * Gets the current running Play application.
      * 

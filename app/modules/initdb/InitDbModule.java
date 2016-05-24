@@ -30,8 +30,6 @@ public class InitDbModule extends Module {
                 admin = UserBo.newInstance(username, encPwd, email).setId(id)
                         .setGroupId(DjsMasterConstants.GROUP_ADMIN);
                 userDao.create(admin);
-            } else {
-                System.out.println("==========> " + admin);
             }
         }
     }

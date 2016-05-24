@@ -13,7 +13,8 @@ public class RegistryModule extends Module {
      */
     @Override
     public Seq<Binding<?>> bindings(Environment env, Configuration conf) {
-        Seq<Binding<?>> bindings = seq(bind(IRegistry.class).to(RegistryImpl.class).eagerly());
+        Seq<Binding<?>> bindings = seq(bind(IRegistry.class).to(RegistryImpl.class).eagerly(),
+                bind(IFormValidator.class).to(FormValidatorImpl.class).eagerly());
         return bindings;
     }
 

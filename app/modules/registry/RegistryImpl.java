@@ -18,6 +18,7 @@ import bo.user.IUserDao;
 import play.Application;
 import play.Logger;
 import play.inject.ApplicationLifecycle;
+import utils.DjsMasterGlobals;
 
 @Singleton
 public class RegistryImpl implements IRegistry {
@@ -32,6 +33,9 @@ public class RegistryImpl implements IRegistry {
     @Inject
     public RegistryImpl(ApplicationLifecycle lifecycle, Application playApp,
             ActorSystem actorSystem) {
+        DjsMasterGlobals.registry = this;
+        DjsMasterGlobals.appConfig = playApp.configuration();
+
         this.playApp = playApp;
         this.actorSystem = actorSystem;
 

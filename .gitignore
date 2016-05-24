@@ -11,3 +11,4 @@ target
 /libexec
 
 /data/
+/.cache-main

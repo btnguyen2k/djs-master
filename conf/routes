@@ -2,7 +2,22 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET     /                           controllers.HomeController.index
+GET     /                                       controllers.HomeController.index
+
+GET     /cp/login                               controllers.AdminCPController.login(returnUrl: String?="")
+POST    /cp/login                               controllers.AdminCPController.loginSubmit(returnUrl: String?="")
+
+GET     /cp                                     controllers.AdminCPController.index()
+GET     /cp/home                                controllers.AdminCPController.home()
+
+GET     /cp/jobTemplateList                     controllers.AdminCPController.jobTemplateList()
+GET     /cp/jobList                             controllers.AdminCPController.jobList()
+GET     /cp/createJobTemplate                   controllers.AdminCPController.createJobTemplate()
+POST    /cp/createJobTemplate                   controllers.AdminCPController.createJobTemplateSubmit()
+GET     /cp/editJobTemplate                     controllers.AdminCPController.editJobTemplate(id: String)
+POST    /cp/editJobTemplate                     controllers.AdminCPController.editJobTemplateSubmit(id: String)
+GET     /cp/deleteJobTemplate                   controllers.AdminCPController.deleteJobTemplate(id: String)
+POST    /cp/deleteJobTemplate                   controllers.AdminCPController.deleteJobTemplateSubmit(id: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET     /assets/*file                           controllers.Assets.versioned(path="/public", file: Asset)

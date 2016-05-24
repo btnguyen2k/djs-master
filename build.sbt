@@ -17,6 +17,8 @@ javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 
 routesGenerator := InjectedRoutesGenerator
 
+pipelineStages := Seq(rjs, digest, gzip)
+
 lazy val root = (project in file(".")).enablePlugins(PlayJava).settings(
     name    := appName,
     version := appVersion
@@ -25,6 +27,8 @@ lazy val root = (project in file(".")).enablePlugins(PlayJava).settings(
 scalaVersion := "2.11.7"
 
 resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases"
+
+resolvers += "Sonatype OSS Snapshot" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 val _springVersion           = "4.2.5.RELEASE"
 val _ddthCacheAdapterVersion = "0.4.1"
@@ -62,5 +66,6 @@ libraryDependencies ++= Seq(
     "com.github.ddth"           %  "ddth-queue-core"            % _ddthQueueVersion,
     "com.github.ddth"           %  "ddth-queue-kafka"           % _ddthQueueVersion,
 
-    "com.github.ddth"           %  "djs-commons"                % "0.1.3.1"
+    // "com.github.ddth"           %  "djs-commons"                % "0.1.3.1"
+    "com.github.ddth"           %  "djs-commons"                % "0.1.3.3-SNAPSHOT"
 )

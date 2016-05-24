@@ -5,6 +5,8 @@ import org.apache.commons.lang3.StringUtils;
 import com.github.ddth.commons.utils.HashUtils;
 
 import bo.user.UserBo;
+import modules.registry.IRegistry;
+import play.mvc.Http.Session;
 
 /**
  * @author Thanh Nguyen <btnguyen2k@gmail.com>
@@ -41,7 +43,28 @@ public class UserUtils {
      * @return
      */
     public static boolean authenticate(UserBo user, String inputPassword) {
+        if (user == null || StringUtils.isEmpty(inputPassword)) {
+            return false;
+        }
         String encryptedPassword = encryptPassword(user, inputPassword);
         return StringUtils.equalsIgnoreCase(encryptedPassword, user.getPassword());
+    }
+
+    public final static String SESSION_ADMIN_ID = "admin_id";
+
+    /**
+     * Gets the current logged in administrator.
+     * 
+     * @param registry
+     * @param session
+     * @return
+     */
+    public static UserBo currentAdmin(IRegistry registry, Session session) {
+        String id = session.get(SESSION_ADMIN_ID);
+        return registry.getUserDao().getUser(id);
+    }
+
+    public static void loginAdmin(UserBo admin, Session session) {
+        session.put(SESSION_ADMIN_ID, admin.getId());
     }
 }

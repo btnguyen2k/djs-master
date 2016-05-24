@@ -9,11 +9,13 @@ import com.google.inject.Provider;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
+import compositions.AdminAuthRequired;
 import modules.cluster.ICluster;
 import modules.registry.IRegistry;
 import play.mvc.Controller;
 import play.mvc.Result;
 
+@AdminAuthRequired
 public class HomeController extends Controller {
 
     @Inject
