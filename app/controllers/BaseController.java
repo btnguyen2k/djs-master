@@ -3,8 +3,12 @@ package controllers;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Inject;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.github.ddth.commons.utils.SerializationUtils;
 import com.google.inject.Provider;
@@ -38,6 +42,26 @@ public class BaseController extends Controller {
 
     @Inject
     protected MessagesApi messagesApi;
+
+    protected static Result doResponseJson(int status) {
+        return doResponseJson(status, null, null);
+    }
+
+    protected static Result doResponseJson(int status, String message) {
+        return doResponseJson(status, message, null);
+    }
+
+    protected static Result doResponseJson(int status, String message, Object data) {
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put("status", status);
+        if (!StringUtils.isBlank(message)) {
+            dataMap.put("message", message);
+        }
+        if (data != null) {
+            dataMap.put("data", data);
+        }
+        return doResponseJson(dataMap);
+    }
 
     /**
      * Responses to client a JSON object.

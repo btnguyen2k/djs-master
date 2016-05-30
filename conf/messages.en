@@ -48,6 +48,8 @@ msg.job_info.edit = Edit Job
 msg.job_info.edit.done = Job "{0}" has been updated successfully.
 msg.job_info.delete = Delete Job
 msg.job_info.delete.done = Job "{0}" has been deleted successfully.
+msg.job_info.start = Start
+msg.job_info.stop = Stop
 
 msg.job_info.id = ID
 msg.job_info.desc = Description

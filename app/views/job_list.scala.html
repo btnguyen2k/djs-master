@@ -58,8 +58,20 @@
                                     </td>
                                     <td style="text-align: center; vertical-align: middle;">@job.getUpdateTimestampStr()</td>
                                     <td style="text-align: center; vertical-align: middle; font-size: x-large;" class="text-nowrap">
-                                        <a href="@job.urlEdit()" title="@messages.at("msg.edit")" style="color:green;" class="fa fa-edit"></a>
-                                        <a href="@job.urlDelete()" title="@messages.at("msg.delete")" style="color:red;" class="fa fa-remove"></a>
+                                        @if(job.isRunning()){
+                                            <a data-id="btnJobInfoStop@job.getId()" href="javascript:;" data-toggle="tooltip" onClick="stopJob('@job.getId');"
+                                                title="@messages.at("msg.job_info.stop")" style="color:red;"
+                                            class="fa fa-stop"></a><a data-id="btnJobInfoStart@job.getId()" href="javascript:;" data-toggle="tooltip" onClick="startJob('@job.getId');"
+                                                title="@messages.at("msg.job_info.start")" style="color:blue;" class="fa fa-play"></a>
+                                        }else{
+                                            <a data-id="btnJobInfoStop@job.getId()" href="javascript:;" data-toggle="tooltip" onClick="stopJob('@job.getId');"
+                                                title="@messages.at("msg.job_info.stop")" style="color:red;"
+                                            class="fa fa-stop"></a><a data-id="btnJobInfoStart@job.getId()" href="javascript:;" data-toggle="tooltip" onClick="startJob('@job.getId');"
+                                                title="@messages.at("msg.job_info.start")" style="color:blue;" class="fa fa-play"></a>
+                                        }
+                                        &nbsp;
+                                        <a href="@job.urlEdit()" data-toggle="tooltip" title="@messages.at("msg.edit")" style="color:green;" class="fa fa-edit"></a>
+                                        <a href="@job.urlDelete()" data-toggle="tooltip" title="@messages.at("msg.delete")" style="color:red;" class="fa fa-remove"></a>
                                     </td>
                                 </tr>
                             }
@@ -76,6 +88,30 @@
 </section>
 
 <script type="text/javascript">
+function _startStopJob(url, id) {
+    $.post(url, function(response){
+        if (response.status == 200) {
+            if (response.data){
+                $("a[data-id='btnJobInfoStop"+id+"']").show();
+                $("a[data-id='btnJobInfoStart"+id+"']").hide();
+            } else {
+                $("a[data-id='btnJobInfoStop"+id+"']").hide();
+                $("a[data-id='btnJobInfoStart"+id+"']").show();
+            }
+        }
+    });
+}
+
+function startJob(id){
+    var url = '@routes.AdminCPController.apiStartJob()?id='+id;
+    _startStopJob(url, id);
+}
+
+function stopJob(id){
+    var url = '@routes.AdminCPController.apiStopJob()?id='+id;
+    _startStopJob(url, id);
+}
+
 $(document).ready(function() {
     $('#tbl_job_templates').DataTable({
         "paging"      : true,
@@ -86,6 +122,9 @@ $(document).ready(function() {
         "info"        : true,
         "autoWidth"   : false
     });
+    @for(job <- jobList){
+        @if(job.isRunning()){$("a[data-id='btnJobInfoStart@job.getId()']").hide();}else{$("a[data-id='btnJobInfoStop@job.getId()']").hide();}
+    }
 });
 </script>
 }

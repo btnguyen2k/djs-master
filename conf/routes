@@ -25,6 +25,8 @@ GET     /cp/editJob                             controllers.AdminCPController.ed
 POST    /cp/editJob                             controllers.AdminCPController.editJobSubmit(id: String)
 GET     /cp/deleteJob                           controllers.AdminCPController.deleteJob(id: String)
 POST    /cp/deleteJob                           controllers.AdminCPController.deleteJobSubmit(id: String)
+POST    /cp/apiStartJob                         controllers.AdminCPController.apiStartJob()
+POST    /cp/apiStopJob                          controllers.AdminCPController.apiStopJob()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                           controllers.Assets.versioned(path="/public", file: Asset)

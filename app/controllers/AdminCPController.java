@@ -344,4 +344,30 @@ public class AdminCPController extends BaseController {
 
         return redirect(routes.AdminCPController.jobList());
     }
+
+    @AdminAuthRequired
+    public Result apiStartJob() {
+        String id = request().getQueryString("id");
+        IJobDao jobDao = registry.get().getJobDao();
+        JobInfoBo jobInfo = jobDao.getJobInfo(id);
+        if (jobInfo == null) {
+            return doResponseJson(404, calcMessages().at("error.job_info.not_found", id));
+        }
+        jobInfo.setIsRunning(true);
+        jobDao.update(jobInfo);
+        return doResponseJson(200, "Successful", jobInfo.isRunning());
+    }
+
+    @AdminAuthRequired
+    public Result apiStopJob() {
+        String id = request().getQueryString("id");
+        IJobDao jobDao = registry.get().getJobDao();
+        JobInfoBo jobInfo = jobDao.getJobInfo(id);
+        if (jobInfo == null) {
+            return doResponseJson(404, calcMessages().at("error.job_info.not_found", id));
+        }
+        jobInfo.setIsRunning(false);
+        jobDao.update(jobInfo);
+        return doResponseJson(200, "Successful", jobInfo.isRunning());
+    }
 }
