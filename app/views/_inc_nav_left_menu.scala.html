@@ -31,9 +31,17 @@
             <li class="header">@messages.at("msg.jobs")</li>
 
             <li @if(active=="job_template_list"){class="active"}>
-                <a href="@routes.AdminCPController.jobTemplateList()"><i class="fa fa-tasks"></i> @messages.at("msg.job_templates")</a>
+                <a href="@routes.AdminCPController.jobTemplateList()">
+                    <i class="fa fa-tasks"></i> @messages.at("msg.job_templates")
+                    <span class="label @if(JobUtils.countJobTemplates()>0){label-primary}else{label-grey} pull-right">@JobUtils.countJobTemplates()</span>
+                </a>
             </li>
-
+            <li @if(active=="job_list"){class="active"}>
+                <a href="@routes.AdminCPController.jobList()">
+                    <i class="fa fa-cogs"></i> @messages.at("msg.job_list")
+                    <span class="label @if(JobUtils.countJobs()>0){label-primary}else{label-grey} pull-right">@JobUtils.countJobs()</span>
+                </a>
+            </li>
 @*
             <li class="treeview">
                 <a href="javascript:;">

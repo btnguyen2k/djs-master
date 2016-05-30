@@ -11,13 +11,20 @@ GET     /cp                                     controllers.AdminCPController.in
 GET     /cp/home                                controllers.AdminCPController.home()
 
 GET     /cp/jobTemplateList                     controllers.AdminCPController.jobTemplateList()
-GET     /cp/jobList                             controllers.AdminCPController.jobList()
 GET     /cp/createJobTemplate                   controllers.AdminCPController.createJobTemplate()
 POST    /cp/createJobTemplate                   controllers.AdminCPController.createJobTemplateSubmit()
 GET     /cp/editJobTemplate                     controllers.AdminCPController.editJobTemplate(id: String)
 POST    /cp/editJobTemplate                     controllers.AdminCPController.editJobTemplateSubmit(id: String)
 GET     /cp/deleteJobTemplate                   controllers.AdminCPController.deleteJobTemplate(id: String)
 POST    /cp/deleteJobTemplate                   controllers.AdminCPController.deleteJobTemplateSubmit(id: String)
+
+GET     /cp/jobList                             controllers.AdminCPController.jobList()
+GET     /cp/createJob                           controllers.AdminCPController.createJob()
+POST    /cp/createJob                           controllers.AdminCPController.createJobSubmit()
+GET     /cp/editJob                             controllers.AdminCPController.editJob(id: String)
+POST    /cp/editJob                             controllers.AdminCPController.editJobSubmit(id: String)
+GET     /cp/deleteJob                           controllers.AdminCPController.deleteJob(id: String)
+POST    /cp/deleteJob                           controllers.AdminCPController.deleteJobSubmit(id: String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                           controllers.Assets.versioned(path="/public", file: Asset)

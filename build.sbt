@@ -67,5 +67,5 @@ libraryDependencies ++= Seq(
     "com.github.ddth"           %  "ddth-queue-kafka"           % _ddthQueueVersion,
 
     // "com.github.ddth"           %  "djs-commons"                % "0.1.3.1"
-    "com.github.ddth"           %  "djs-commons"                % "0.1.3.3-SNAPSHOT"
+    "com.github.ddth"           %  "djs-commons"                % "0.1.3.5-SNAPSHOT"
 )

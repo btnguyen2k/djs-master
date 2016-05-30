@@ -39,3 +39,37 @@ msg.job_template.delete.done = Job Template "{0}" has been deleted successfully.
 error.job_template.empty_id = Error: Empty job template id!
 error.job_template.exists = Error: Job template "{0}" already existed!
 error.job_template.not_found = Error: Job template "{0}" does not exist!
+
+msg.job_list = Job List
+
+msg.job_info.create = Create Job
+msg.job_info.create.done = Job "{0}" has been created successfully.
+msg.job_info.edit = Edit Job
+msg.job_info.edit.done = Job "{0}" has been updated successfully.
+msg.job_info.delete = Delete Job
+msg.job_info.delete.done = Job "{0}" has been deleted successfully.
+
+msg.job_info.id = ID
+msg.job_info.desc = Description
+msg.job_info.template = Job Template
+msg.job_info.tags = Tags
+msg.job_info.update_timestamp = Update Timestamp
+msg.job_info.params = Job Parameters
+msg.job_info.cron = Cron Settings
+msg.job_info.cron.desc = <sec> <min> <hr> <day> <mon> <dow>
+msg.job_info.cron.second = Second
+msg.job_info.cron.minute = Minute
+msg.job_info.cron.hour = Hour
+msg.job_info.cron.day = Day of Month
+msg.job_info.cron.month = Month
+msg.job_info.cron.dow = Day of Week
+
+error.job_info.empty_id = Error: Empty job id!
+error.job_info.exists = Error: Job "{0}" already existed!
+error.job_info.not_found = Error: Job "{0}" does not exist!
+error.job_info.cron.invalid_second = Error: Invalid cron's second config!
+error.job_info.cron.invalid_minute = Error: Invalid cron's minute config!
+error.job_info.cron.invalid_hour = Error: Invalid cron's hour config!
+error.job_info.cron.invalid_day = Error: Invalid cron's day config!
+error.job_info.cron.invalid_month = Error: Invalid cron's month config!
+error.job_info.cron.invalid_dow = Error: Invalid cron's day-of-week config!

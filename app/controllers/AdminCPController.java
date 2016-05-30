@@ -4,16 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.github.ddth.djs.bo.job.IJobDao;
+import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.github.ddth.djs.bo.job.JobTemplateBo;
 
 import compositions.AdminAuthRequired;
+import forms.FormCreateEditJobInfo;
 import forms.FormCreateEditJobTemplate;
 import forms.FormLogin;
+import models.JobInfoModel;
 import models.JobTemplateModel;
 import play.data.Form;
 import play.mvc.Result;
 import play.twirl.api.Html;
 import utils.DjsMasterConstants;
+import utils.JobUtils;
 import utils.UserUtils;
 
 /**
@@ -207,111 +211,137 @@ public class AdminCPController extends BaseController {
 
     @AdminAuthRequired
     public Result jobList() throws Exception {
-        Html html = render(VIEW_JOB_LIST);
+        IJobDao jobDao = registry.get().getJobDao();
+        String[] jobInfoIds = jobDao.getAllJobInfoIds();
+        List<JobInfoBo> jobInfoList = new ArrayList<>();
+        for (String id : jobInfoIds) {
+            JobInfoBo jobInfo = jobDao.getJobInfo(id);
+            if (jobInfo != null) {
+                jobInfoList.add(jobInfo);
+            }
+        }
+        Html html = render(VIEW_JOB_LIST, (Object) JobInfoModel.newInstances(jobInfoList));
         return ok(html);
     }
 
-    // /*----------------------------------------------------------------------*/
-    // public final static String VIEW_BUILDS_CONFIG = "builds_config";
-    //
-    // @AdminAuthRequired
-    // public static Result buildsConfig() throws Exception {
-    // Form<FormConfigBuilds> form = Form.form(FormConfigBuilds.class).bind(
-    // FormConfigBuilds.newInstance().toMap());
-    // form.discardErrors();
-    // Html html = render(VIEW_BUILDS_CONFIG, form);
-    // return ok(html);
-    // }
-    //
-    // @AdminAuthRequired
-    // public static Result buildsConfigSubmit() throws Exception {
-    // Form<FormConfigBuilds> form =
-    // Form.form(FormConfigBuilds.class).bindFromRequest();
-    // if (form.hasErrors()) {
-    // Html html = render(VIEW_BUILDS_CONFIG, form);
-    // return ok(html);
-    // }
-    //
-    // FormConfigBuilds model = form.get();
-    // IConfDao confDao = Registry.getConfDao();
-    // confDao.updateOrCreate(XeiuConstants.CONF_IOS_BUILD_MIN,
-    // model.iosBuildMin);
-    // confDao.updateOrCreate(XeiuConstants.CONF_IOS_BUILD_MAX,
-    // model.iosBuildMax);
-    // confDao.updateOrCreate(XeiuConstants.CONF_AOS_BUILD_MIN,
-    // model.aosBuildMin);
-    // confDao.updateOrCreate(XeiuConstants.CONF_AOS_BUILD_MAX,
-    // model.aosBuildMax);
-    //
-    // flash(VIEW_BUILDS_CONFIG, Messages.get("msg.builds.config.update.done"));
-    //
-    // return redirect(controllers.routes.AdminCPController.buildsConfig());
-    // }
-    //
-    // /*----------------------------------------------------------------------*/
-    // public final static String VIEW_MAINTENANCE_CONFIG =
-    // "maintenance_config";
-    //
-    // @AdminAuthRequired
-    // public static Result maintenanceConfig() throws Exception {
-    // Form<FormConfigMaintenance> form =
-    // Form.form(FormConfigMaintenance.class).bind(
-    // FormConfigMaintenance.newInstance().toMap());
-    // form.discardErrors();
-    // Html html = render(VIEW_MAINTENANCE_CONFIG, form);
-    // return ok(html);
-    // }
-    //
-    // @AdminAuthRequired
-    // public static Result maintenanceConfigSubmit() throws Exception {
-    // Form<FormConfigMaintenance> form =
-    // Form.form(FormConfigMaintenance.class).bindFromRequest();
-    // if (form.hasErrors()) {
-    // Html html = render(VIEW_MAINTENANCE_CONFIG, form);
-    // return ok(html);
-    // }
-    //
-    // FormConfigMaintenance model = form.get();
-    // IConfDao confDao = Registry.getConfDao();
-    // confDao.updateOrCreate(XeiuConstants.CONF_MAINTENANCE, model.toJson());
-    //
-    // flash(VIEW_MAINTENANCE_CONFIG,
-    // Messages.get("msg.maintenance.config.update.done"));
-    //
-    // return
-    // redirect(controllers.routes.AdminCPController.maintenanceConfig());
-    // }
-    //
-    // /*----------------------------------------------------------------------*/
-    // public final static String VIEW_POPUP_EVENT_CONFIG =
-    // "popup_event_config";
-    //
-    // @AdminAuthRequired
-    // public static Result popupEventConfig() throws Exception {
-    // Form<FormConfigPopupEvent> form =
-    // Form.form(FormConfigPopupEvent.class).bind(
-    // FormConfigPopupEvent.newInstance().toMap());
-    // form.discardErrors();
-    // Html html = render(VIEW_POPUP_EVENT_CONFIG, form);
-    // return ok(html);
-    // }
-    //
-    // @AdminAuthRequired
-    // public static Result popupEventConfigSubmit() throws Exception {
-    // Form<FormConfigPopupEvent> form =
-    // Form.form(FormConfigPopupEvent.class).bindFromRequest();
-    // if (form.hasErrors()) {
-    // Html html = render(VIEW_POPUP_EVENT_CONFIG, form);
-    // return ok(html);
-    // }
-    //
-    // FormConfigPopupEvent model = form.get();
-    // IConfDao confDao = Registry.getConfDao();
-    // confDao.updateOrCreate(XeiuConstants.CONF_POPUP_EVENT, model.toJson());
-    //
-    // flash(VIEW_POPUP_EVENT_CONFIG,
-    // Messages.get("msg.popup_event.config.update.done"));
-    //
-    // return redirect(controllers.routes.AdminCPController.popupEventConfig());
-    // }
+    public final static String VIEW_CREATE_JOB = "create_job";
+
+    @AdminAuthRequired
+    public Result createJob() throws Exception {
+        Form<FormCreateEditJobInfo> form = formFactory.form(FormCreateEditJobInfo.class)
+                .bind(FormCreateEditJobInfo.defaultInstance.toMap());
+        form.discardErrors();
+
+        Html html = render(VIEW_CREATE_JOB, form,
+                JobTemplateModel.newInstances(JobUtils.getAllJobTemplates()));
+        return ok(html);
+    }
+
+    @AdminAuthRequired
+    public Result createJobSubmit() throws Exception {
+        Form<FormCreateEditJobInfo> form = formFactory.form(FormCreateEditJobInfo.class)
+                .bindFromRequest();
+        if (form.hasErrors()) {
+            Html html = render(VIEW_CREATE_JOB, form,
+                    JobTemplateModel.newInstances(JobUtils.getAllJobTemplates()));
+            return ok(html);
+        }
+
+        FormCreateEditJobInfo model = form.get();
+        JobInfoBo jobInfo = JobInfoBo.newInstance();
+        jobInfo.setId(model.id).setDescription(model.description).setTemplateId(model.templateId)
+                .setCron(model.cron).setParams(model.paramsMap).setTags(model.tags);
+        IJobDao jobDao = registry.get().getJobDao();
+        jobDao.create(jobInfo);
+
+        flash(VIEW_JOB_TEMPLATE_LIST,
+                calcMessages().at("msg.job_info.create.done", jobInfo.getId()));
+
+        return redirect(routes.AdminCPController.jobList());
+    }
+
+    public final static String VIEW_EDIT_JOB = "edit_job";
+
+    @AdminAuthRequired
+    public Result editJob(String id) throws Exception {
+        IJobDao jobDao = registry.get().getJobDao();
+        JobInfoBo jobInfo = jobDao.getJobInfo(id);
+        if (jobInfo == null) {
+            flash(VIEW_JOB_LIST, DjsMasterConstants.FLASH_MSG_PREFIX_ERROR
+                    + calcMessages().at("error.job_info.not_found", id));
+
+            return redirect(routes.AdminCPController.jobList());
+        }
+
+        Form<FormCreateEditJobInfo> form = formFactory.form(FormCreateEditJobInfo.class)
+                .bind(FormCreateEditJobInfo.newInstance(jobInfo).toMap());
+        form.discardErrors();
+        Html html = render(VIEW_EDIT_JOB, form,
+                JobTemplateModel.newInstances(JobUtils.getAllJobTemplates()));
+        return ok(html);
+    }
+
+    @AdminAuthRequired
+    public Result editJobSubmit(String id) throws Exception {
+        IJobDao jobDao = registry.get().getJobDao();
+        JobInfoBo jobInfo = jobDao.getJobInfo(id);
+        if (jobInfo == null) {
+            flash(VIEW_JOB_LIST, DjsMasterConstants.FLASH_MSG_PREFIX_ERROR
+                    + calcMessages().at("error.job_info.not_found", id));
+
+            return redirect(routes.AdminCPController.jobList());
+        }
+
+        Form<FormCreateEditJobInfo> form = formFactory.form(FormCreateEditJobInfo.class)
+                .bindFromRequest();
+        if (form.hasErrors()) {
+            Html html = render(VIEW_JOB_LIST, form);
+            return ok(html);
+        }
+
+        FormCreateEditJobInfo model = form.get();
+        jobInfo.setDescription(model.description).setTemplateId(model.templateId)
+                .setCron(model.cron).setParams(model.paramsMap).setTags(model.tags);
+        jobDao.update(jobInfo);
+
+        flash(VIEW_JOB_LIST, calcMessages().at("msg.job_info.edit.done", jobInfo.getId()));
+
+        return redirect(routes.AdminCPController.jobList());
+    }
+
+    public final static String VIEW_DELETE_JOB = "delete_job";
+
+    @AdminAuthRequired
+    public Result deleteJob(String id) throws Exception {
+        IJobDao jobDao = registry.get().getJobDao();
+        JobInfoBo jobInfo = jobDao.getJobInfo(id);
+        if (jobInfo == null) {
+            flash(VIEW_JOB_LIST, DjsMasterConstants.FLASH_MSG_PREFIX_ERROR
+                    + calcMessages().at("error.job_info.not_found", id));
+
+            return redirect(routes.AdminCPController.jobList());
+        }
+
+        JobInfoModel model = JobInfoModel.newInstance(jobInfo);
+        Html html = render(VIEW_DELETE_JOB, model);
+        return ok(html);
+    }
+
+    @AdminAuthRequired
+    public Result deleteJobSubmit(String id) throws Exception {
+        IJobDao jobDao = registry.get().getJobDao();
+        JobInfoBo jobInfo = jobDao.getJobInfo(id);
+        if (jobInfo == null) {
+            flash(VIEW_JOB_LIST, DjsMasterConstants.FLASH_MSG_PREFIX_ERROR
+                    + calcMessages().at("error.job_info.not_found", id));
+
+            return redirect(routes.AdminCPController.jobList());
+        }
+
+        jobDao.delete(jobInfo);
+
+        flash(VIEW_JOB_LIST, calcMessages().at("msg.job_info.delete.done", jobInfo.getId()));
+
+        return redirect(routes.AdminCPController.jobList());
+    }
 }
