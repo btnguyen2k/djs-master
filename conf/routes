@@ -4,6 +4,8 @@
 
 GET     /                                       controllers.HomeController.index
 
+GET     /cp/test                                controllers.AdminCPController.test()
+
 GET     /cp/login                               controllers.AdminCPController.login(returnUrl: String?="")
 POST    /cp/login                               controllers.AdminCPController.loginSubmit(returnUrl: String?="")
 

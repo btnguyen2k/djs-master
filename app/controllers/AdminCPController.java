@@ -3,16 +3,30 @@ package controllers;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
+
 import com.github.ddth.djs.bo.job.IJobDao;
 import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.github.ddth.djs.bo.job.JobTemplateBo;
+import com.github.ddth.djs.message.BaseMessage;
+import com.github.ddth.djs.message.bus.JobInfoAddedMessage;
+import com.github.ddth.djs.message.bus.JobInfoRemovedMessage;
+import com.github.ddth.djs.message.bus.JobInfoStartedMessage;
+import com.github.ddth.djs.message.bus.JobInfoStoppedMessage;
+import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
 
+import akka.actor.ActorRef;
+import akka.cluster.pubsub.DistributedPubSub;
+import akka.cluster.pubsub.DistributedPubSubMediator;
+import akka.utils.AkkaConstants;
 import compositions.AdminAuthRequired;
 import forms.FormCreateEditJobInfo;
 import forms.FormCreateEditJobTemplate;
 import forms.FormLogin;
 import models.JobInfoModel;
 import models.JobTemplateModel;
+import modules.cluster.ICluster;
 import play.data.Form;
 import play.mvc.Result;
 import play.twirl.api.Html;
@@ -27,6 +41,33 @@ import utils.UserUtils;
  * @since 0.1.0
  */
 public class AdminCPController extends BaseController {
+
+    @Inject
+    private Provider<ICluster> cluster;
+
+    private ActorRef distributedPubSubMediator;
+
+    private ActorRef getDistributedPubSubMediator() {
+        if (distributedPubSubMediator == null) {
+            synchronized (this) {
+                if (distributedPubSubMediator == null) {
+                    distributedPubSubMediator = DistributedPubSub
+                            .get(cluster.get().getClusterActorSystem()).mediator();
+                }
+            }
+        }
+        return distributedPubSubMediator;
+    }
+
+    public Result test() {
+        return ok(getDistributedPubSubMediator().toString());
+    }
+
+    protected void broadcastEventMessage(String topic, BaseMessage msg) {
+        getDistributedPubSubMediator()
+                .tell(new DistributedPubSubMediator.Publish(topic, msg, false), null);
+    }
+
     /*----------------------------------------------------------------------*/
     public final static String VIEW_LOGIN = "login";
 
@@ -252,11 +293,15 @@ public class AdminCPController extends BaseController {
         jobInfo.setId(model.id).setDescription(model.description).setTemplateId(model.templateId)
                 .setCron(model.cron).setParams(model.paramsMap).setTags(model.tags);
         IJobDao jobDao = registry.get().getJobDao();
-        jobDao.create(jobInfo);
-
-        flash(VIEW_JOB_TEMPLATE_LIST,
-                calcMessages().at("msg.job_info.create.done", jobInfo.getId()));
-
+        if (jobDao.create(jobInfo)) {
+            jobInfo = jobDao.getJobInfo(jobInfo.getId());
+            broadcastEventMessage(AkkaConstants.TOPIC_JOBEVENT, new JobInfoAddedMessage(jobInfo));
+            flash(VIEW_JOB_TEMPLATE_LIST,
+                    calcMessages().at("msg.job_info.create.done", jobInfo.getId()));
+        } else {
+            flash(VIEW_JOB_TEMPLATE_LIST,
+                    calcMessages().at("msg.job_info.create.failed", jobInfo.getId()));
+        }
         return redirect(routes.AdminCPController.jobList());
     }
 
@@ -302,10 +347,14 @@ public class AdminCPController extends BaseController {
         FormCreateEditJobInfo model = form.get();
         jobInfo.setDescription(model.description).setTemplateId(model.templateId)
                 .setCron(model.cron).setParams(model.paramsMap).setTags(model.tags);
-        jobDao.update(jobInfo);
-
-        flash(VIEW_JOB_LIST, calcMessages().at("msg.job_info.edit.done", jobInfo.getId()));
-
+        if (jobDao.update(jobInfo)) {
+            broadcastEventMessage(AkkaConstants.TOPIC_JOBEVENT, new JobInfoUpdatedMessage(jobInfo));
+            flash(VIEW_JOB_TEMPLATE_LIST,
+                    calcMessages().at("msg.job_info.edit.done", jobInfo.getId()));
+        } else {
+            flash(VIEW_JOB_TEMPLATE_LIST,
+                    calcMessages().at("msg.job_info.edit.failed", jobInfo.getId()));
+        }
         return redirect(routes.AdminCPController.jobList());
     }
 
@@ -338,10 +387,14 @@ public class AdminCPController extends BaseController {
             return redirect(routes.AdminCPController.jobList());
         }
 
-        jobDao.delete(jobInfo);
-
-        flash(VIEW_JOB_LIST, calcMessages().at("msg.job_info.delete.done", jobInfo.getId()));
-
+        if (jobDao.delete(jobInfo)) {
+            broadcastEventMessage(AkkaConstants.TOPIC_JOBEVENT, new JobInfoRemovedMessage(jobInfo));
+            flash(VIEW_JOB_TEMPLATE_LIST,
+                    calcMessages().at("msg.job_info.delete.done", jobInfo.getId()));
+        } else {
+            flash(VIEW_JOB_TEMPLATE_LIST,
+                    calcMessages().at("msg.job_info.delete.failed", jobInfo.getId()));
+        }
         return redirect(routes.AdminCPController.jobList());
     }
 
@@ -354,8 +407,12 @@ public class AdminCPController extends BaseController {
             return doResponseJson(404, calcMessages().at("error.job_info.not_found", id));
         }
         jobInfo.setIsRunning(true);
-        jobDao.update(jobInfo);
-        return doResponseJson(200, "Successful", jobInfo.isRunning());
+        if (jobDao.update(jobInfo)) {
+            broadcastEventMessage(AkkaConstants.TOPIC_JOBEVENT, new JobInfoStartedMessage(jobInfo));
+            return doResponseJson(200, "Successful", jobInfo.isRunning());
+        } else {
+            return doResponseJson(500, "Error: job updated failed!");
+        }
     }
 
     @AdminAuthRequired
@@ -367,7 +424,11 @@ public class AdminCPController extends BaseController {
             return doResponseJson(404, calcMessages().at("error.job_info.not_found", id));
         }
         jobInfo.setIsRunning(false);
-        jobDao.update(jobInfo);
-        return doResponseJson(200, "Successful", jobInfo.isRunning());
+        if (jobDao.update(jobInfo)) {
+            broadcastEventMessage(AkkaConstants.TOPIC_JOBEVENT, new JobInfoStoppedMessage(jobInfo));
+            return doResponseJson(200, "Successful", jobInfo.isRunning());
+        } else {
+            return doResponseJson(500, "Error: job updated failed!");
+        }
     }
 }

@@ -146,7 +146,7 @@ public abstract class BaseDjsActor extends UntypedActor {
             Logger.info("{" + getActorName() + "} Unsubscribed successfully from ["
                     + ack.unsubscribe() + "].");
         } else {
-            unhandled(message);
+            // unhandled(message);
         }
     }
 }

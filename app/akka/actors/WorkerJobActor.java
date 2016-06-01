@@ -5,10 +5,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.ddth.djs.bo.job.JobInfoBo;
+import com.github.ddth.djs.message.bus.JobInfoStartedMessage;
+import com.github.ddth.djs.message.bus.JobInfoStoppedMessage;
 import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
 import com.github.ddth.djs.message.bus.TickMessage;
 import com.github.ddth.djs.utils.CronFormat;
 
+import akka.actor.Props;
 import akka.utils.AkkaConstants;
 import modules.registry.IRegistry;
 import play.Logger;
@@ -20,6 +23,10 @@ import play.Logger;
  * @since 0.1.0
  */
 public class WorkerJobActor extends BaseDjsActor {
+
+    public static Props newProps(IRegistry registry, JobInfoBo jobInfo) {
+        return Props.create(WorkerJobActor.class, registry, jobInfo);
+    }
 
     public final static String NAME = WorkerJobActor.class.getSimpleName();
 
@@ -89,6 +96,10 @@ public class WorkerJobActor extends BaseDjsActor {
     public void onReceive(Object message) throws Exception {
         if (message instanceof JobInfoUpdatedMessage) {
             _eventJobInfoUpdated((JobInfoUpdatedMessage) message);
+        } else if (message instanceof JobInfoStartedMessage) {
+            _eventJobInfoUpdated((JobInfoStartedMessage) message);
+        } else if (message instanceof JobInfoStoppedMessage) {
+            _eventJobInfoUpdated((JobInfoStoppedMessage) message);
         } else if (message instanceof TickMessage) {
             _eventTick((TickMessage) message);
         } else {
@@ -104,6 +115,14 @@ public class WorkerJobActor extends BaseDjsActor {
                 this.cronFormat = null;
             }
         }
+    }
+
+    protected void _eventJobInfoUpdated(JobInfoStartedMessage msg) {
+        jobInfo.setIsRunning(true);
+    }
+
+    protected void _eventJobInfoUpdated(JobInfoStoppedMessage msg) {
+        jobInfo.setIsRunning(false);
     }
 
     /*----------------------------------------------------------------------*/
@@ -141,7 +160,7 @@ public class WorkerJobActor extends BaseDjsActor {
     private AtomicBoolean LOCK = new AtomicBoolean(false);
 
     protected void _eventTick(TickMessage msg) {
-        if (isTickMatched(msg)) {
+        if (jobInfo.isRunning() && isTickMatched(msg)) {
             if (LOCK.compareAndSet(false, true)) {
                 try {
                     lastTick = msg;

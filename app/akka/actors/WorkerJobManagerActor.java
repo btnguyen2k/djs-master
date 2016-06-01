@@ -3,12 +3,15 @@ package akka.actors;
 import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.github.ddth.djs.message.bus.JobInfoAddedMessage;
 import com.github.ddth.djs.message.bus.JobInfoRemovedMessage;
+import com.github.ddth.djs.message.bus.JobInfoStartedMessage;
+import com.github.ddth.djs.message.bus.JobInfoStoppedMessage;
 import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
 
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.utils.AkkaConstants;
 import modules.registry.IRegistry;
+import play.Logger;
 
 /**
  * Actor on [worker] node(s) that manages (create/update/delete) job actors.
@@ -44,18 +47,20 @@ public class WorkerJobManagerActor extends BaseDjsActor {
 
     protected ActorRef lookupChild(JobInfoBo jobInfo) {
         String path = WorkerJobActor.calcInstanceName(jobInfo);
-        return getContext().actorSelection(path).anchor();
+        return getContext().getChild(path);
     }
 
     protected void _eventJobInfoAdded(JobInfoAddedMessage msg) {
+        Logger.info("ADDED new job: " + msg.id + "/" + msg.timestampMillis + "/" + msg.jobInfo);
         JobInfoBo jobInfo = msg.jobInfo;
-        Props props = Props.create(WorkerJobActor.class, jobInfo);
+        Props props = WorkerJobActor.newProps(getRegistry(), jobInfo);
         getContext().actorOf(props, WorkerJobActor.calcInstanceName(jobInfo));
     }
 
     protected void _eventJobInfoRemoved(JobInfoRemovedMessage msg) {
         ActorRef actorRef = lookupChild(msg.jobInfo);
         if (actorRef != null) {
+            Logger.info("REMOVED job: " + msg.id + "/" + msg.timestampMillis + "/" + msg.jobInfo);
             getContext().stop(actorRef);
         }
     }
@@ -63,6 +68,23 @@ public class WorkerJobManagerActor extends BaseDjsActor {
     protected void _eventJobInfoUpdated(JobInfoUpdatedMessage msg) {
         ActorRef actorRef = lookupChild(msg.jobInfo);
         if (actorRef != null) {
+            Logger.info("UPDATED job: " + msg.id + "/" + msg.timestampMillis + "/" + msg.jobInfo);
+            actorRef.tell(msg, getSelf());
+        }
+    }
+
+    protected void _eventJobInfoUpdated(JobInfoStartedMessage msg) {
+        ActorRef actorRef = lookupChild(msg.jobInfo);
+        if (actorRef != null) {
+            Logger.info("STARTED job: " + msg.id + "/" + msg.timestampMillis + "/" + msg.jobInfo);
+            actorRef.tell(msg, getSelf());
+        }
+    }
+
+    protected void _eventJobInfoUpdated(JobInfoStoppedMessage msg) {
+        ActorRef actorRef = lookupChild(msg.jobInfo);
+        if (actorRef != null) {
+            Logger.info("STOPPED job: " + msg.id + "/" + msg.timestampMillis + "/" + msg.jobInfo);
             actorRef.tell(msg, getSelf());
         }
     }
@@ -75,6 +97,10 @@ public class WorkerJobManagerActor extends BaseDjsActor {
             _eventJobInfoRemoved((JobInfoRemovedMessage) message);
         } else if (message instanceof JobInfoUpdatedMessage) {
             _eventJobInfoUpdated((JobInfoUpdatedMessage) message);
+        } else if (message instanceof JobInfoStartedMessage) {
+            _eventJobInfoUpdated((JobInfoStartedMessage) message);
+        } else if (message instanceof JobInfoStoppedMessage) {
+            _eventJobInfoUpdated((JobInfoStoppedMessage) message);
         } else {
             super.onReceive(message);
         }
