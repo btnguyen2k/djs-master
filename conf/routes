@@ -30,5 +30,8 @@ POST    /cp/deleteJob                           controllers.AdminCPController.de
 POST    /cp/apiStartJob                         controllers.AdminCPController.apiStartJob()
 POST    /cp/apiStopJob                          controllers.AdminCPController.apiStopJob()
 
+POST    /api/pollTask                           controllers.ApiController.apiPollTask()
+POST    /api/returnTask                         controllers.ApiController.apiReturnTask()
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                           controllers.Assets.versioned(path="/public", file: Asset)

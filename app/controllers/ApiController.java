@@ -1,18 +1,32 @@
 package controllers;
 
+import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
-import javax.inject.Inject;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.ddth.commons.utils.DPathUtils;
 import com.github.ddth.commons.utils.DateFormatUtils;
-import com.google.inject.Provider;
+import com.github.ddth.commons.utils.SerializationUtils;
+import com.github.ddth.djs.message.queue.TaskFireoffMessage;
+import com.github.ddth.djs.utils.DjsConstants;
+import com.github.ddth.djs.utils.DjsUtils;
+import com.github.ddth.queue.IQueue;
+import com.github.ddth.queue.IQueueMessage;
+import com.github.ddth.queue.impl.BaseUniversalQueueMessage;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-import modules.cluster.ICluster;
-import modules.registry.IRegistry;
-import play.mvc.Controller;
+import akka.util.ByteString;
+import play.Logger;
+import play.mvc.Http.RawBuffer;
+import play.mvc.Http.RequestBody;
 import play.mvc.Result;
+import queue.IQueueService;
+import utils.JobUtils;
 
 /**
  * Controller that handles API requests.
@@ -20,13 +34,125 @@ import play.mvc.Result;
  * @author Thanh Nguyen <btnguyen2k@gmail.com>
  * @since 0.1.0
  */
-public class ApiController extends Controller {
+public class ApiController extends BaseController {
 
-    @Inject
-    private Provider<ICluster> cluster;
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseRequest() throws IOException {
+        RequestBody requestBody = request().body();
+        String requestContent = null;
+        JsonNode jsonNode = requestBody.asJson();
+        if (jsonNode != null) {
+            requestContent = jsonNode.toString();
+        } else {
+            RawBuffer rawBuffer = requestBody.asRaw();
+            if (rawBuffer != null) {
+                ByteString buffer = rawBuffer.asBytes();
+                if (buffer != null) {
+                    requestContent = buffer.toString();
+                } else {
+                    byte[] buff = FileUtils.readFileToByteArray(rawBuffer.asFile());
+                    requestContent = buff != null ? new String(buff, DjsConstants.UTF8) : "";
+                }
+            } else {
+                requestContent = requestBody.asText();
+            }
+        }
+        return SerializationUtils.fromJsonString(requestContent, Map.class);
+    }
 
-    @Inject
-    private Provider<IRegistry> registry;
+    private final static String API_ERROR_CLIENT_ERROR = "Request data is invalid or unable to parse.";
+    private final static String API_ERROR_CLIENT_ID_MISSING_INVALID = "Parameter ["
+            + DjsConstants.API_PARAM_CLIENT_ID + "] is missing or invalid.";
+    private final static String API_ERROR_TASK_INVALID_MISSING = "Parameter ["
+            + DjsConstants.API_PARAM_TASK + "] is missing or invalid.";
+    private final static String API_OK = "Successful";
+
+    /**
+     * Polls a job task from server.
+     * 
+     * @return
+     */
+    public Result apiPollTask() {
+        try {
+            Map<String, Object> reqData = parseRequest();
+            if (reqData == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR, API_ERROR_CLIENT_ERROR);
+            }
+            String clientId = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_CLIENT_ID,
+                    String.class);
+            if (StringUtils.isBlank(clientId)) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR,
+                        API_ERROR_CLIENT_ID_MISSING_INVALID);
+            }
+
+            IQueueService queueService = getRegistry().getQueueService();
+            IQueue queue = queueService.getQueue(clientId);
+            IQueueMessage _queueMsg = queue != null ? queue.take() : null;
+            try {
+                if (_queueMsg instanceof BaseUniversalQueueMessage) {
+                    BaseUniversalQueueMessage queueMsg = (BaseUniversalQueueMessage) _queueMsg;
+                    TaskFireoffMessage taskFireoffMsg = JobUtils.deserializeTask(queueMsg.content(),
+                            TaskFireoffMessage.class);
+                    if (taskFireoffMsg != null) {
+                        return doResponseJson(DjsConstants.RESPONSE_OK, API_OK, queueMsg.content());
+                    }
+                }
+                if (_queueMsg != null) {
+                    Logger.warn("Invalid fetched queue message: " + _queueMsg);
+                } else if (queue == null) {
+                    Logger.warn("Cannot obtain queue instance for [" + clientId + "].");
+                }
+                return doResponseJson(DjsConstants.RESPONSE_NOT_FOUND);
+            } finally {
+                if (_queueMsg != null) {
+                    queue.finish(_queueMsg);
+                }
+            }
+        } catch (Exception e) {
+            return doResponseJson(DjsConstants.RESPONSE_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public Result apiReturnTask() {
+        try {
+            Map<String, Object> reqData = parseRequest();
+            if (reqData == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR, API_ERROR_CLIENT_ERROR);
+            }
+            String clientId = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_CLIENT_ID,
+                    String.class);
+            if (StringUtils.isBlank(clientId)) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR,
+                        API_ERROR_CLIENT_ID_MISSING_INVALID);
+            }
+
+            String taskDataBase64 = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_TASK,
+                    String.class);
+            byte[] taskData = taskDataBase64 != null ? DjsUtils.base64Decode(taskDataBase64) : null;
+            TaskFireoffMessage taskFireoffMsg = null;
+            try {
+                taskFireoffMsg = TaskFireoffMessage.deserialize(taskData, TaskFireoffMessage.class);
+            } catch (Exception e) {
+                taskFireoffMsg = null;
+            }
+            if (taskFireoffMsg == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR,
+                        API_ERROR_TASK_INVALID_MISSING);
+            }
+
+            IQueueService queueService = getRegistry().getQueueService();
+            IQueue queue = queueService.getQueue("djs-master");
+            if (!JobUtils.notifyTask(queue, taskFireoffMsg)) {
+                Logger.warn("Cannot put [" + TaskFireoffMessage.class.getSimpleName()
+                        + "] to queue: " + taskFireoffMsg);
+                return doResponseJson(DjsConstants.RESPONSE_OK, "False", false);
+            } else {
+                return doResponseJson(DjsConstants.RESPONSE_OK, "True", true);
+            }
+        } catch (Exception e) {
+            return doResponseJson(DjsConstants.RESPONSE_SERVER_ERROR, e.getMessage());
+        }
+    }
 
     public Result index() {
         Date now = new Date();

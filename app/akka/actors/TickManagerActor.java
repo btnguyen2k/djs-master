@@ -14,16 +14,16 @@ import modules.registry.IRegistry;
 import play.Logger;
 
 /**
- * Actor on [worker] node(s) that manages (create/update/delete) job actors.
+ * Actor on [tick] node(s) that manages (create/update/delete) job-tick actors.
  * 
  * @author Thanh Nguyen <btnguyen2k@gmail.com>
  * @since 0.1.0
  */
-public class WorkerJobManagerActor extends BaseDjsActor {
+public class TickManagerActor extends BaseDjsActor {
 
-    public final static String NAME = WorkerJobManagerActor.class.getSimpleName();
+    public final static String NAME = TickManagerActor.class.getSimpleName();
 
-    public WorkerJobManagerActor(IRegistry registry) {
+    public TickManagerActor(IRegistry registry) {
         super(registry);
     }
 
@@ -46,15 +46,15 @@ public class WorkerJobManagerActor extends BaseDjsActor {
     }
 
     protected ActorRef lookupChild(JobInfoBo jobInfo) {
-        String path = WorkerJobActor.calcInstanceName(jobInfo);
+        String path = TickJobActor.calcInstanceName(jobInfo);
         return getContext().getChild(path);
     }
 
     protected void _eventJobInfoAdded(JobInfoAddedMessage msg) {
         Logger.info("ADDED new job: " + msg.id + "/" + msg.timestampMillis + "/" + msg.jobInfo);
         JobInfoBo jobInfo = msg.jobInfo;
-        Props props = WorkerJobActor.newProps(getRegistry(), jobInfo);
-        getContext().actorOf(props, WorkerJobActor.calcInstanceName(jobInfo));
+        Props props = TickJobActor.newProps(getRegistry(), jobInfo);
+        getContext().actorOf(props, TickJobActor.calcInstanceName(jobInfo));
     }
 
     protected void _eventJobInfoRemoved(JobInfoRemovedMessage msg) {

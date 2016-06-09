@@ -32,7 +32,7 @@ resolvers += "Sonatype OSS Snapshot" at "https://oss.sonatype.org/content/reposi
 
 val _springVersion           = "4.2.5.RELEASE"
 val _ddthCacheAdapterVersion = "0.4.1"
-val _ddthQueueVersion        = "0.4.0.1"
+val _ddthQueueVersion        = "0.4.1"
 val _ddthCommons             = "0.4.0"
 val _akkaVersion             = "2.4.4"
 
@@ -66,6 +66,5 @@ libraryDependencies ++= Seq(
     "com.github.ddth"           %  "ddth-queue-core"            % _ddthQueueVersion,
     "com.github.ddth"           %  "ddth-queue-kafka"           % _ddthQueueVersion,
 
-    // "com.github.ddth"           %  "djs-commons"                % "0.1.3.1"
-    "com.github.ddth"           %  "djs-commons"                % "0.1.3.6-SNAPSHOT"
+    "com.github.ddth"           %  "djs-commons"                % "0.1.3.9-SNAPSHOT"
 )

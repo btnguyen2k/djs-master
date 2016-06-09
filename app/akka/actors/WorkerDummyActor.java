@@ -7,7 +7,7 @@ import com.github.ddth.djs.message.bus.TickMessage;
 
 import modules.registry.IRegistry;
 
-public class WorkerDummyActor extends WorkerJobActor {
+public class WorkerDummyActor extends TickJobActor {
 
     public WorkerDummyActor(IRegistry registry, JobInfoBo jobInfo) {
         super(registry, jobInfo);

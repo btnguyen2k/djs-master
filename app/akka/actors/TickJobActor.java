@@ -9,26 +9,31 @@ import com.github.ddth.djs.message.bus.JobInfoStartedMessage;
 import com.github.ddth.djs.message.bus.JobInfoStoppedMessage;
 import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
 import com.github.ddth.djs.message.bus.TickMessage;
+import com.github.ddth.djs.message.queue.TaskFireoffMessage;
 import com.github.ddth.djs.utils.CronFormat;
+import com.github.ddth.queue.IQueue;
 
 import akka.actor.Props;
 import akka.utils.AkkaConstants;
 import modules.registry.IRegistry;
 import play.Logger;
+import queue.IQueueService;
+import utils.JobUtils;
 
 /**
- * Actor on [worker] node(s) that triggers a job's task.
+ * Actor on [tick] node(s) that fires {@link TaskFireoffMessage} whenever a job
+ * is due to execute.
  * 
  * @author Thanh Nguyen <btnguyen2k@gmail.com>
  * @since 0.1.0
  */
-public class WorkerJobActor extends BaseDjsActor {
+public class TickJobActor extends BaseDjsActor {
 
     public static Props newProps(IRegistry registry, JobInfoBo jobInfo) {
-        return Props.create(WorkerJobActor.class, registry, jobInfo);
+        return Props.create(TickJobActor.class, registry, jobInfo);
     }
 
-    public final static String NAME = WorkerJobActor.class.getSimpleName();
+    public final static String NAME = TickJobActor.class.getSimpleName();
 
     /**
      * Calculates an "instance" actor name according to the associated
@@ -47,7 +52,7 @@ public class WorkerJobActor extends BaseDjsActor {
     // subscribe to "TICK" topic, with group=NAME+jobInfo
     private String instanceName, subscribeTopic = AkkaConstants.TOPIC_TICK;
 
-    public WorkerJobActor(IRegistry registry, JobInfoBo jobInfo) {
+    public TickJobActor(IRegistry registry, JobInfoBo jobInfo) {
         super(registry);
         this.jobInfo = jobInfo;
         instanceName = calcInstanceName(jobInfo);
@@ -150,11 +155,16 @@ public class WorkerJobActor extends BaseDjsActor {
      * @param tick
      */
     protected void doTick(TickMessage tick) {
-        // Date d = new Date(tick.timestampMillis);
-        // System.out.println("=========={" + getActorName() + "} TICK matches
-        // [" + d + "] against ["
-        // + jobInfo.getCron() + "]");
-        // TODO
+        TaskFireoffMessage taskFireoffMsg = new TaskFireoffMessage(getJobInfo());
+        IQueueService queueService = getRegistry().getQueueService();
+        IQueue queue = queueService.getQueue("djs-master");
+        if (!JobUtils.notifyTask(queue, taskFireoffMsg)) {
+            Logger.warn("Cannot put [" + TaskFireoffMessage.class.getSimpleName()
+                    + "] to queue for " + tick);
+        } else {
+            Logger.info(
+                    "Put [" + TaskFireoffMessage.class.getSimpleName() + "] to queue for " + tick);
+        }
     }
 
     private AtomicBoolean LOCK = new AtomicBoolean(false);

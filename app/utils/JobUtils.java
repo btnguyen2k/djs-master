@@ -6,6 +6,13 @@ import java.util.List;
 import com.github.ddth.djs.bo.job.IJobDao;
 import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.github.ddth.djs.bo.job.JobTemplateBo;
+import com.github.ddth.djs.message.BaseMessage;
+import com.github.ddth.djs.message.queue.TaskFireoffMessage;
+import com.github.ddth.queue.IQueue;
+import com.github.ddth.queue.IQueueMessage;
+import com.github.ddth.queue.impl.universal2.UniversalQueueMessage;
+
+import play.Logger;
 
 public class JobUtils {
     public static int countJobTemplates() {
@@ -40,5 +47,24 @@ public class JobUtils {
             }
         }
         return result.toArray(JobInfoBo.EMPTY_ARRAY);
+    }
+
+    public static byte[] serializeTask(BaseMessage msg) {
+        return msg != null ? msg.toBytes() : null;
+    }
+
+    public static <T extends BaseMessage> T deserializeTask(byte[] data, Class<T> clazz) {
+        try {
+            return BaseMessage.deserialize(data, clazz);
+        } catch (Exception e) {
+            Logger.warn("Cannot deserialize data to [" + clazz + "]: " + e.getMessage(), e);
+            return null;
+        }
+    }
+
+    public static boolean notifyTask(IQueue queue, TaskFireoffMessage taskFireoffMsg) {
+        IQueueMessage queueMsg = UniversalQueueMessage.newInstance()
+                .content(taskFireoffMsg.toBytes());
+        return queue.queue(queueMsg);
     }
 }

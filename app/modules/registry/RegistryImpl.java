@@ -11,13 +11,14 @@ import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import com.github.ddth.djs.bo.job.IJobDao;
 import com.github.ddth.djs.bo.log.ITaskLogDao;
-import com.github.ddth.kafka.KafkaClient;
+import com.github.ddth.queue.IQueue;
 
 import akka.actor.ActorSystem;
 import bo.user.IUserDao;
 import play.Application;
 import play.Logger;
 import play.inject.ApplicationLifecycle;
+import queue.IQueueService;
 import utils.DjsMasterGlobals;
 
 @Singleton
@@ -130,15 +131,15 @@ public class RegistryImpl implements IRegistry {
      * {@inheritDoc}
      */
     @Override
-    public KafkaClient getKafkaClientForTasks() {
-        return appContext.getBean("KAFKA_CLIENT_TASKS", KafkaClient.class);
+    public IQueue getQueueTaskFeedback() {
+        return appContext.getBean("QUEUE_TASK_FEEDBACK", IQueue.class);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public KafkaClient getKafkaClientForFeedback() {
-        return appContext.getBean("KAFKA_CLIENT_FEEDBACK", KafkaClient.class);
+    public IQueueService getQueueService() {
+        return appContext.getBean(IQueueService.class);
     }
 }

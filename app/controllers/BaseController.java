@@ -43,6 +43,14 @@ public class BaseController extends Controller {
     @Inject
     protected MessagesApi messagesApi;
 
+    protected ICluster getCluster() {
+        return cluster.get();
+    }
+
+    protected IRegistry getRegistry() {
+        return registry.get();
+    }
+
     protected static Result doResponseJson(int status) {
         return doResponseJson(status, null, null);
     }

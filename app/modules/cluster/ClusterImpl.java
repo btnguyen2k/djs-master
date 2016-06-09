@@ -16,7 +16,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.actors.MasterFacadeActor;
-import akka.actors.WorkerJobManagerActor;
+import akka.actors.TickManagerActor;
 import akka.cluster.Cluster;
 import akka.utils.AkkaConstants;
 import modules.registry.IRegistry;
@@ -36,10 +36,10 @@ public class ClusterImpl implements ICluster {
         actorSystem.actorOf(props, MasterFacadeActor.NAME);
     }
 
-    private void initWorkerActors() {
+    private void initTickActors() {
         // worker job manager actor
-        Props props = Props.create(WorkerJobManagerActor.class, registry.get());
-        ActorRef jobManagerActor = actorSystem.actorOf(props, WorkerJobManagerActor.NAME);
+        Props props = Props.create(TickManagerActor.class, registry.get());
+        ActorRef jobManagerActor = actorSystem.actorOf(props, TickManagerActor.NAME);
 
         // start jobs
         IJobDao jobDao = registry.get().getJobDao();
@@ -94,8 +94,8 @@ public class ClusterImpl implements ICluster {
         if (selfRoles != null && selfRoles.contains(AkkaConstants.ROLE_MASTER)) {
             initMasterActors();
         }
-        if (selfRoles != null && selfRoles.contains(AkkaConstants.ROLE_WORKER)) {
-            initWorkerActors();
+        if (selfRoles != null && selfRoles.contains(AkkaConstants.ROLE_TICK)) {
+            initTickActors();
         }
     }
 

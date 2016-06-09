@@ -2,11 +2,12 @@ package modules.registry;
 
 import com.github.ddth.djs.bo.job.IJobDao;
 import com.github.ddth.djs.bo.log.ITaskLogDao;
-import com.github.ddth.kafka.KafkaClient;
+import com.github.ddth.queue.IQueue;
 
 import akka.actor.ActorSystem;
 import bo.user.IUserDao;
 import play.Application;
+import queue.IQueueService;
 
 public interface IRegistry {
 
@@ -46,18 +47,17 @@ public interface IRegistry {
     public IUserDao getUserDao();
 
     /**
-     * Gets {@link KafkaClient} instance to push task notifications to workers.
+     * Gets {@link IQueueService} to push/retrieve task fireoff notifications.
      * 
      * @return
      */
-    public KafkaClient getKafkaClientForTasks();
+    public IQueueService getQueueService();
 
     /**
-     * Gets {@link KafkaClient} instance to receive task results/notifications
-     * from workers.
+     * Gets {@link IQueue} to buffer task results/feedbacks from workers.
      * 
      * @return
-     * 
      */
-    public KafkaClient getKafkaClientForFeedback();
+    public IQueue getQueueTaskFeedback();
+
 }
