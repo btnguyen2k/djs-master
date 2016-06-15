@@ -9,14 +9,26 @@
                            http://www.springframework.org/schema/util 
                            http://www.springframework.org/schema/util/spring-util.xsd">
 
-	<!-- Spring configuration for mode: Standlone, Embedded database -->
+	<!-- Spring configuration for mode: Stand-alone / Embedded database -->
+
+	<!-- Storage: embedded database (H2) to store Job info & Task logs, data 
+		is not lost when the JVM restarts -->
+	<!-- Cache: in-memory caches -->
+	<!-- Queue: in-memory queues to queue tasks/notifications, data is lost 
+		if the JVM restarts -->
+	<!-- !!!This configuration is not recommended for production use!!! -->
+	<!-- Variant: none -->
+
+	<bean id="NODE_ID" class="java.lang.String">
+		<!-- if set to empty/null, node's IP address will be used as node id -->
+		<constructor-arg value="" />
+	</bean>
 
 	<bean id="CACHE_FACTORY" class="com.github.ddth.cacheadapter.guava.GuavaCacheFactory"
 		scope="singleton" init-method="init" destroy-method="destroy">
 		<property name="defaultExpireAfterAccess" value="-1" />
 		<property name="defaultExpireAfterWrite" value="-1" />
 	</bean>
-
 
 	<bean id="DATASOURCE" class="com.zaxxer.hikari.HikariDataSource"
 		scope="singleton" lazy-init="false">

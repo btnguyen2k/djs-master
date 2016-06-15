@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.StringUtils;
 
 import com.github.ddth.djs.bo.job.JobInfoBo;
+import com.github.ddth.djs.bo.log.ITaskLogDao;
 import com.github.ddth.djs.message.bus.JobInfoStartedMessage;
 import com.github.ddth.djs.message.bus.JobInfoStoppedMessage;
 import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
@@ -158,12 +159,13 @@ public class TickJobActor extends BaseDjsActor {
         TaskFireoffMessage taskFireoffMsg = new TaskFireoffMessage(getJobInfo());
         IQueueService queueService = getRegistry().getQueueService();
         IQueue queue = queueService.getQueue("djs-master");
-        if (!JobUtils.notifyTask(queue, taskFireoffMsg)) {
-            Logger.warn("Cannot put [" + TaskFireoffMessage.class.getSimpleName()
-                    + "] to queue for " + tick);
+        if (!JobUtils.queueEvent(queue, taskFireoffMsg)) {
+            Logger.warn("Cannot put [" + taskFireoffMsg.getClass().getSimpleName() + "/"
+                    + taskFireoffMsg.id + "] to queue for tick " + tick.id + "/"
+                    + tick.timestampMillis + ", queue size: " + queue.queueSize());
         } else {
-            Logger.info(
-                    "Put [" + TaskFireoffMessage.class.getSimpleName() + "] to queue for " + tick);
+            ITaskLogDao taskLogDao = getRegistry().getTaskLogDao();
+            JobUtils.logTask(taskLogDao, getRegistry().getNodeId(), taskFireoffMsg);
         }
     }
 

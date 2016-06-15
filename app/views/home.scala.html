@@ -2,10 +2,11 @@
 @import play.mvc._
 @import utils._
 @_layout(
-    active   = "home"
+    active   = "home",
+    customJs = Array("Highcharts-4.2.5/js/highcharts.js")
 ){
 <section class="content-header">
-    <h1>Dashboard <small>Version 2.0</small></h1>
+    <h1>@messages.at("msg.dashboard")</h1>
     <ol class="breadcrumb">
         <li><a href="@routes.AdminCPController.home()"><i class="fa fa-dashboard"></i> @messages.at("msg.home")</a></li>
         <li class="active">@messages.at("msg.dashboard")</li>
@@ -13,6 +14,76 @@
 </section>
             
 <section class="content">
-    Dashboard
+    <div class="row">
+        <div class="col-xs-12">
+            <div class="box box-primary">
+                    <div class="box-header">
+                        Header
+				    </div>
+                    <div class="box-body">
+                        <div id="chart_pie" style="height: 400px; width: 100%">
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
 </section>
+<script type="text/javascript">
+
+function updatePieChart(series) {
+    $.get("@routes.AdminCPController.ajajxLatestTaskLogsByCategories()", function(data){
+        if (data.status==200){
+            var seriesData = [];
+            $.each(data.data, function(key, value){
+                seriesData.push([key, value]);
+            });
+            series.setData(seriesData, true);
+        }
+    });
+}
+
+$(document).ready(function(){
+	$('#chart_pie').highcharts({
+        chart: {
+            plotBackgroundColor: null,
+            plotBorderWidth    : null,
+            plotShadow         : false,
+            type               : 'pie',
+            events: {
+                load: function(){
+                    var series = this.series[0];
+                    updatePieChart(series);
+                	setInterval(function () {
+                	    updatePieChart(series);
+                    }, 5000);
+                }
+            }
+        },
+        title: {
+            text: 'Latest Task Status'
+        },
+        tooltip: {
+            pointFormat: '<b>{point.percentage:.1f}%</b>'
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                dataLabels: {
+                    enabled: true,
+                    format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                    style: {
+                        color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                    }
+                }
+            }
+        },
+        series: [{
+            'name'      : 'Status',
+            colorByPoint: true,
+            data        : [{}]
+        }]
+    });
+});
+</script>
 }

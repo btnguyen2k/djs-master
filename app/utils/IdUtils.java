@@ -1,5 +1,7 @@
 package utils;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.github.ddth.commons.utils.IdGenerator;
 
 /**
@@ -10,4 +12,10 @@ import com.github.ddth.commons.utils.IdGenerator;
  */
 public class IdUtils {
     public final static IdGenerator ID_GEN = IdGenerator.getInstance(IdGenerator.getMacAddr());
+
+    public final static AtomicLong COUNTER = new AtomicLong(0);
+
+    public static long nextId() {
+        return COUNTER.incrementAndGet();
+    }
 }

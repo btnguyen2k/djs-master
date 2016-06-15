@@ -11,7 +11,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.github.ddth.commons.utils.DPathUtils;
 import com.github.ddth.commons.utils.DateFormatUtils;
 import com.github.ddth.commons.utils.SerializationUtils;
+import com.github.ddth.djs.message.BaseMessage;
+import com.github.ddth.djs.message.queue.TaskFinishMessage;
 import com.github.ddth.djs.message.queue.TaskFireoffMessage;
+import com.github.ddth.djs.message.queue.TaskPickupMessage;
 import com.github.ddth.djs.utils.DjsConstants;
 import com.github.ddth.djs.utils.DjsUtils;
 import com.github.ddth.queue.IQueue;
@@ -89,16 +92,22 @@ public class ApiController extends BaseController {
             IQueue queue = queueService.getQueue(clientId);
             IQueueMessage _queueMsg = queue != null ? queue.take() : null;
             try {
-                if (_queueMsg instanceof BaseUniversalQueueMessage) {
-                    BaseUniversalQueueMessage queueMsg = (BaseUniversalQueueMessage) _queueMsg;
-                    TaskFireoffMessage taskFireoffMsg = JobUtils.deserializeTask(queueMsg.content(),
-                            TaskFireoffMessage.class);
-                    if (taskFireoffMsg != null) {
-                        return doResponseJson(DjsConstants.RESPONSE_OK, API_OK, queueMsg.content());
-                    }
+                BaseMessage taskMsg = JobUtils.fromQueueMessage(_queueMsg);
+                if (_queueMsg != null && Logger.isDebugEnabled()) {
+                    Logger.debug("\tTook a message from fireoff queue [" + _queueMsg.qId() + "/"
+                            + (taskMsg != null ? taskMsg.id : "[null]") + "], queue size: "
+                            + queue.queueSize());
+                }
+
+                if (taskMsg instanceof TaskFireoffMessage) {
+                    return doResponseJson(DjsConstants.RESPONSE_OK, API_OK,
+                            _queueMsg instanceof BaseUniversalQueueMessage
+                                    ? ((BaseUniversalQueueMessage) _queueMsg).content()
+                                    : taskMsg.toBytes());
                 }
                 if (_queueMsg != null) {
-                    Logger.warn("Invalid fetched queue message: " + _queueMsg);
+                    Logger.warn("Invalid fetched queue message [" + _queueMsg.qId() + "]: "
+                            + (taskMsg != null ? taskMsg.getClass().getName() : "[null]"));
                 } else if (queue == null) {
                     Logger.warn("Cannot obtain queue instance for [" + clientId + "].");
                 }
@@ -119,12 +128,6 @@ public class ApiController extends BaseController {
             if (reqData == null) {
                 return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR, API_ERROR_CLIENT_ERROR);
             }
-            String clientId = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_CLIENT_ID,
-                    String.class);
-            if (StringUtils.isBlank(clientId)) {
-                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR,
-                        API_ERROR_CLIENT_ID_MISSING_INVALID);
-            }
 
             String taskDataBase64 = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_TASK,
                     String.class);
@@ -140,11 +143,75 @@ public class ApiController extends BaseController {
                         API_ERROR_TASK_INVALID_MISSING);
             }
 
-            IQueueService queueService = getRegistry().getQueueService();
-            IQueue queue = queueService.getQueue("djs-master");
-            if (!JobUtils.notifyTask(queue, taskFireoffMsg)) {
-                Logger.warn("Cannot put [" + TaskFireoffMessage.class.getSimpleName()
-                        + "] to queue: " + taskFireoffMsg);
+            IQueue queue = getRegistry().getQueueTaskFeedback();
+            if (!JobUtils.queueEvent(queue, taskFireoffMsg)) {
+                Logger.warn("Cannot put task event to queue: " + taskFireoffMsg);
+                return doResponseJson(DjsConstants.RESPONSE_OK, "False", false);
+            } else {
+                return doResponseJson(DjsConstants.RESPONSE_OK, "True", true);
+            }
+        } catch (Exception e) {
+            return doResponseJson(DjsConstants.RESPONSE_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public Result apiNotifyTaskPickup() {
+        try {
+            Map<String, Object> reqData = parseRequest();
+            if (reqData == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR, API_ERROR_CLIENT_ERROR);
+            }
+
+            String taskDataBase64 = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_TASK,
+                    String.class);
+            byte[] taskData = taskDataBase64 != null ? DjsUtils.base64Decode(taskDataBase64) : null;
+            TaskPickupMessage taskPickupMsg = null;
+            try {
+                taskPickupMsg = TaskPickupMessage.deserialize(taskData, TaskPickupMessage.class);
+            } catch (Exception e) {
+                taskPickupMsg = null;
+            }
+            if (taskPickupMsg == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR,
+                        API_ERROR_TASK_INVALID_MISSING);
+            }
+
+            IQueue queue = getRegistry().getQueueTaskFeedback();
+            if (!JobUtils.queueEvent(queue, taskPickupMsg)) {
+                Logger.warn("Cannot put task event to queue: " + taskPickupMsg);
+                return doResponseJson(DjsConstants.RESPONSE_OK, "False", false);
+            } else {
+                return doResponseJson(DjsConstants.RESPONSE_OK, "True", true);
+            }
+        } catch (Exception e) {
+            return doResponseJson(DjsConstants.RESPONSE_SERVER_ERROR, e.getMessage());
+        }
+    }
+
+    public Result apiNotifyTaskFinish() {
+        try {
+            Map<String, Object> reqData = parseRequest();
+            if (reqData == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR, API_ERROR_CLIENT_ERROR);
+            }
+
+            String taskDataBase64 = DPathUtils.getValue(reqData, DjsConstants.API_PARAM_TASK,
+                    String.class);
+            byte[] taskData = taskDataBase64 != null ? DjsUtils.base64Decode(taskDataBase64) : null;
+            TaskFinishMessage taskFinishMsg = null;
+            try {
+                taskFinishMsg = TaskFinishMessage.deserialize(taskData, TaskFinishMessage.class);
+            } catch (Exception e) {
+                taskFinishMsg = null;
+            }
+            if (taskFinishMsg == null) {
+                return doResponseJson(DjsConstants.RESPONSE_CLIENT_ERROR,
+                        API_ERROR_TASK_INVALID_MISSING);
+            }
+
+            IQueue queue = getRegistry().getQueueTaskFeedback();
+            if (!JobUtils.queueEvent(queue, taskFinishMsg)) {
+                Logger.warn("Cannot put task event to queue: " + taskFinishMsg);
                 return doResponseJson(DjsConstants.RESPONSE_OK, "False", false);
             } else {
                 return doResponseJson(DjsConstants.RESPONSE_OK, "True", true);

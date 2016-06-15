@@ -61,6 +61,11 @@ CREATE INDEX ON djs_tasklog_base(timestamp_create);
 CREATE INDEX ON djs_tasklog_base(timestamp_pickup);
 CREATE INDEX ON djs_tasklog_base(timestamp_finish);
 
+CREATE TABLE IF NOT EXISTS djs_tasklog_latest (
+    task_id                 VARCHAR(32),
+    PRIMARY KEY (task_id)
+);
+
 CREATE TEMP TABLE IF NOT EXISTS djs_tasklog_201601 AS SELECT * FROM djs_tasklog_base;
 CREATE TEMP TABLE IF NOT EXISTS djs_tasklog_201602 AS SELECT * FROM djs_tasklog_base;
 CREATE TEMP TABLE IF NOT EXISTS djs_tasklog_201603 AS SELECT * FROM djs_tasklog_base;

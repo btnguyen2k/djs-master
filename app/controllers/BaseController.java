@@ -78,8 +78,6 @@ public class BaseController extends Controller {
      * @return
      */
     protected static Result doResponseJson(Object data) {
-        // response().setHeader(CONTENT_TYPE, "application/json;
-        // charset=utf-8");
         return ok(data != null ? SerializationUtils.toJsonString(data) : "").as("application/json");
     }
 

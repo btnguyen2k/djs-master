@@ -1,14 +1,16 @@
 package controllers;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-
-import javax.inject.Inject;
-import javax.inject.Provider;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.ddth.djs.bo.job.IJobDao;
 import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.github.ddth.djs.bo.job.JobTemplateBo;
+import com.github.ddth.djs.bo.log.ITaskLogDao;
+import com.github.ddth.djs.bo.log.TaskLogBo;
 import com.github.ddth.djs.message.BaseMessage;
 import com.github.ddth.djs.message.bus.JobInfoAddedMessage;
 import com.github.ddth.djs.message.bus.JobInfoRemovedMessage;
@@ -26,8 +28,8 @@ import forms.FormCreateEditJobTemplate;
 import forms.FormLogin;
 import models.JobInfoModel;
 import models.JobTemplateModel;
-import modules.cluster.ICluster;
 import play.data.Form;
+import play.i18n.Messages;
 import play.mvc.Result;
 import play.twirl.api.Html;
 import utils.DjsMasterConstants;
@@ -41,9 +43,6 @@ import utils.UserUtils;
  * @since 0.1.0
  */
 public class AdminCPController extends BaseController {
-
-    @Inject
-    private Provider<ICluster> cluster;
 
     private ActorRef distributedPubSubMediator;
 
@@ -66,6 +65,32 @@ public class AdminCPController extends BaseController {
     protected void broadcastEventMessage(String topic, BaseMessage msg) {
         getDistributedPubSubMediator()
                 .tell(new DistributedPubSubMediator.Publish(topic, msg, false), null);
+    }
+
+    /*----------------------------------------------------------------------*/
+    public Result ajajxLatestTaskLogsByCategories() {
+        Messages messages = calcMessages();
+        Map<String, AtomicInteger> data = new HashMap<>();
+
+        ITaskLogDao taskLogDao = getRegistry().getTaskLogDao();
+        String[] taskLogIdList = taskLogDao.getLatestTaskLogIds();
+        for (String id : taskLogIdList) {
+            TaskLogBo taskLog = taskLogDao.getTaskLog(id);
+            if (taskLog != null) {
+                String key = messages.at("msg.task_status." + taskLog.getStatus());
+                AtomicInteger value = data.get(key);
+                if (value == null) {
+                    value = new AtomicInteger();
+                    data.put(key, value);
+                }
+                value.incrementAndGet();
+            }
+        }
+        return doResponseJson(200, "Successful", data);
+    }
+
+    public Result ajaxLatestTaskLogs() {
+        return ok();
     }
 
     /*----------------------------------------------------------------------*/
