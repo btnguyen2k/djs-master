@@ -1,11 +1,15 @@
 package controllers;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.github.ddth.commons.utils.DateFormatUtils;
 import com.github.ddth.djs.bo.job.IJobDao;
 import com.github.ddth.djs.bo.job.JobInfoBo;
 import com.github.ddth.djs.bo.job.JobTemplateBo;
@@ -17,6 +21,7 @@ import com.github.ddth.djs.message.bus.JobInfoRemovedMessage;
 import com.github.ddth.djs.message.bus.JobInfoStartedMessage;
 import com.github.ddth.djs.message.bus.JobInfoStoppedMessage;
 import com.github.ddth.djs.message.bus.JobInfoUpdatedMessage;
+import com.github.ddth.djs.utils.DjsConstants;
 
 import akka.actor.ActorRef;
 import akka.cluster.pubsub.DistributedPubSub;
@@ -70,7 +75,17 @@ public class AdminCPController extends BaseController {
     /*----------------------------------------------------------------------*/
     public Result ajajxLatestTaskLogsByCategories() {
         Messages messages = calcMessages();
-        Map<String, AtomicInteger> data = new HashMap<>();
+        SortedMap<String, AtomicInteger> data = new TreeMap<>();
+        {
+            int[] allStatus = { DjsConstants.TASK_STATUS_FINISHED_CANCEL,
+                    DjsConstants.TASK_STATUS_FINISHED_ERROR, DjsConstants.TASK_STATUS_FINISHED_OK,
+                    DjsConstants.TASK_STATUS_NEW, DjsConstants.TASK_STATUS_PICKED,
+                    DjsConstants.TASK_STATUS_RETURNED, DjsConstants.TASK_STATUS_SKIPPED };
+            for (int status : allStatus) {
+                String key = messages.at("msg.task_status." + status);
+                data.put(key, new AtomicInteger());
+            }
+        }
 
         ITaskLogDao taskLogDao = getRegistry().getTaskLogDao();
         String[] taskLogIdList = taskLogDao.getLatestTaskLogIds();
@@ -89,8 +104,46 @@ public class AdminCPController extends BaseController {
         return doResponseJson(200, "Successful", data);
     }
 
-    public Result ajaxLatestTaskLogs() {
-        return ok();
+    public Result ajaxLatestTaskLogs(int numRecords) {
+        List<Map<String, Object>> taskLogList = new ArrayList<>();
+        ITaskLogDao taskLogDao = getRegistry().getTaskLogDao();
+        String[] taskLogIdList = taskLogDao.getLatestTaskLogIds();
+        Messages messages = calcMessages();
+        int counter = 0;
+        for (String id : taskLogIdList) {
+            TaskLogBo taskLog = taskLogDao.getTaskLog(id);
+            if (taskLog != null) {
+                Map<String, Object> taskLogData = new HashMap<>();
+                {
+                    taskLogData.put("id", taskLog.getId());
+                    taskLogData.put("job_id", taskLog.getJobId());
+                    taskLogData.put("status", taskLog.getStatus());
+                    taskLogData.put("status_str",
+                            messages.at("msg.task_status." + taskLog.getStatus()));
+
+                    Date tCreate = taskLog.getTimestampCreate();
+                    taskLogData.put("timestamp_create", tCreate != null
+                            ? DateFormatUtils.toString(tCreate, DjsMasterConstants.DF_HHMMSS)
+                            : "[null]");
+
+                    Date tPickup = taskLog.getTimestampPickup();
+                    taskLogData.put("timestamp_pickup", tPickup != null
+                            ? DateFormatUtils.toString(tPickup, DjsMasterConstants.DF_HHMMSS)
+                            : "[null]");
+
+                    Date tFinish = taskLog.getTimestampFinish();
+                    taskLogData.put("timestamp_finish", tFinish != null
+                            ? DateFormatUtils.toString(tFinish, DjsMasterConstants.DF_HHMMSS)
+                            : "[null]");
+                }
+                taskLogList.add(taskLogData);
+                counter++;
+                if (counter >= numRecords || counter >= 1000) {
+                    break;
+                }
+            }
+        }
+        return doResponseJson(200, "Successful", taskLogList);
     }
 
     /*----------------------------------------------------------------------*/

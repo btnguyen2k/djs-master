@@ -20,6 +20,7 @@ public class DjsMasterConstants {
     public final static int GROUP_ADMIN = 1;
 
     public final static String DF_FULL = "yyyy-MM-dd HH:mm:ss";
+    public final static String DF_HHMMSS = "HH:mm:ss";
 
     public final static String GROUP_ID_MASTER = "djs_master";
 }

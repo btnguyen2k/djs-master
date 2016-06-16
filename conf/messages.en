@@ -28,9 +28,9 @@ msg.task_status.0 = New
 msg.task_status.1 = Picked-up
 msg.task_status.2 = Skipped
 msg.task_status.3 = Returned
-msg.task_status.10 = Finished-OK
-msg.task_status.11 = Finished-Cancelled
-msg.task_status.12 = Finished-Error
+msg.task_status.10 = Done
+msg.task_status.11 = Cancelled
+msg.task_status.12 = Error
 
 msg.job_template.id = ID
 msg.job_template.desc = Description
